@@ -1,0 +1,133 @@
+
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Video Transcriber</title>
+    
+    <!-- Stylesheets -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" integrity="sha512-Fo3rlrZj/k7ujTnHg4CGR2D7kSs0v4LLanw2qksYuRlEzO+tcaEPQogQ0KaoGN26/zrn20ImR1DfuLWnOo7aBA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link rel="stylesheet" href="/static/css/enhanced.css">
+</head>
+<body class="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900">
+    <header class="bg-white dark:bg-gray-800 shadow-sm">
+        <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center">
+                    <a href="/" class="flex items-center text-xl font-bold text-gray-900 dark:text-white">
+                        <span class="text-primary-600 dark:text-primary-400 mr-2">🎤</span> AI Transcriber
+                    </a>
+                </div>
+            </div>
+        </div>
+    </header>
+    
+    <main class="flex-1">
+        <div class="container mx-auto px-4 py-8">
+            <div class="max-w-4xl mx-auto text-center mb-10">
+                <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-4">AI Video Transcriber</h1>
+                <p class="text-lg text-gray-600 dark:text-gray-300">Modern UI with tab switching functionality</p>
+            </div>
+            
+            <!-- Tabs Container -->
+            <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden border border-gray-100 dark:border-gray-700 max-w-4xl mx-auto">
+                <!-- Tabs -->
+                <div class="flex border-b border-gray-200 dark:border-gray-700">
+                    <button type="button" class="tab-button active px-6 py-4 text-sm font-medium text-center border-b-2 border-primary-500 text-primary-600 dark:text-primary-400 dark:border-primary-500 flex-1">
+                        <i class="fas fa-upload mr-2"></i> Upload File
+                    </button>
+                    <button type="button" class="tab-button px-6 py-4 text-sm font-medium text-center border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300 flex-1">
+                        <i class="fas fa-link mr-2"></i> From URL
+                    </button>
+                    <button type="button" class="tab-button px-6 py-4 text-sm font-medium text-center border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300 flex-1">
+                        <i class="fab fa-google-drive mr-2"></i> Google Drive
+                    </button>
+                </div>
+
+                <!-- Tab Content -->
+                <div class="p-6 md:p-8">
+                    <!-- File Upload Tab Content -->
+                    <div class="tab-content active" id="tab-upload-file">
+                        <form id="uploadForm" action="/transcribe" method="post" enctype="multipart/form-data" class="space-y-6">
+                            <div class="file-upload-container group" id="dropZone">
+                                <div class="p-8 border-2 border-dashed border-gray-300 dark:border-gray-600 bg-gray-50/50 dark:bg-gray-800/30 text-center rounded-xl">
+                                    <div class="w-16 h-16 mx-auto mb-4 flex items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400">
+                                        <i class="fas fa-cloud-upload-alt text-2xl"></i>
+                                    </div>
+                                    <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-1">Drag & drop your file here</h3>
+                                    <p class="text-gray-500 dark:text-gray-400 mb-6">or <span class="text-primary-600 dark:text-primary-400 font-medium">browse files</span></p>
+                                    <button type="button" class="btn btn-primary px-6 py-2.5" id="browseBtn">
+                                        <i class="fas fa-folder-open mr-2"></i>Choose File
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                    
+                    <!-- URL Tab Content -->
+                    <div class="tab-content hidden" id="tab-from-url">
+                        <div class="text-center py-8">
+                            <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">Enter Video/Audio URL</h3>
+                            <p class="text-gray-500 dark:text-gray-400 mb-6">Paste a link to YouTube, Vimeo, or other media URL</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Google Drive Tab Content -->
+                    <div class="tab-content hidden" id="tab-google-drive">
+                        <div class="text-center py-8">
+                            <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">Connect to Google Drive</h3>
+                            <p class="text-gray-500 dark:text-gray-400 mb-6">Access and transcribe files from your Google Drive</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+    
+    <footer class="py-6 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 mt-auto">
+        <div class="container mx-auto px-4 text-center text-sm text-gray-500 dark:text-gray-400">
+            © 2025 AI Video Transcriber
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="/static/js/app.js"></script>
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Tab switching functionality
+        const tabButtons = document.querySelectorAll('.tab-button');
+        const tabContents = document.querySelectorAll('.tab-content');
+        
+        tabButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const target = button.textContent.trim();
+                let targetId = '';
+                
+                if (target.includes('Upload File')) {
+                    targetId = 'tab-upload-file';
+                } else if (target.includes('From URL')) {
+                    targetId = 'tab-from-url';
+                } else if (target.includes('Google Drive')) {
+                    targetId = 'tab-google-drive';
+                }
+                
+                // Update active tab button
+                tabButtons.forEach(btn => {
+                    btn.classList.remove('border-primary-500', 'text-primary-600');
+                    btn.classList.add('border-transparent', 'text-gray-500');
+                });
+                button.classList.add('border-primary-500', 'text-primary-600');
+                button.classList.remove('border-transparent', 'text-gray-500');
+                
+                // Show corresponding content
+                tabContents.forEach(content => content.classList.add('hidden'));
+                document.getElementById(targetId).classList.remove('hidden');
+            });
+        });
+    });
+    </script>
+</body>
+</html>
+    

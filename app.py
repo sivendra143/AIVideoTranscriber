@@ -5,6 +5,34 @@ import json
 import threading
 import requests
 from typing import Dict, Any, Optional
+import whisper
+from pytube import YouTube
+import tempfile
+import shutil
+import subprocess
+import torch
+from datetime import datetime, date
+import re
+import nltk
+from nltk.tokenize import sent_tokenize
+from nltk.corpus import stopwords
+from nltk.probability import FreqDist
+from collections import defaultdict, namedtuple
+import numpy as np
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.cluster import KMeans
+import pandas as pd
+from bertopic import BERTopic
+from sentence_transformers import SentenceTransformer
+from keybert import KeyBERT
+from keyphrase_vectorizers import KeyphraseCountVectorizer
+from functools import wraps
+import warnings
+warnings.filterwarnings('ignore')
+
+# Download required NLTK data
+nltk.download('punkt')
+nltk.download('stopwords')
 
 # LM Studio Configuration
 LM_STUDIO_API_URL = "http://localhost:1234/v1/chat/completions"  # Default LM Studio API URL
@@ -391,6 +419,183 @@ def detect_content():
             'message': f'Error analyzing video: {str(e)}'
         })
 
+# Login required decorator
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not current_user:
+            return redirect(url_for('login', next=request.url))
+        return f(*args, **kwargs)
+    return decorated_function
+
+@app.route('/')
+def index():
+    transcript = session.get('transcript', '')
+    action_points = session.get('action_points', '')
+    return render_template('enhanced_index.html', 
+                         transcript=transcript, 
+                         action_points=action_points,
+                         feature_flags=FEATURE_FLAGS,
+                         current_user=current_user,
+                         current_year=date.today().year)
+
+# Serve robots.txt
+@app.route('/robots.txt')
+def serve_robots():
+    return send_from_directory(app.static_folder, 'robots.txt')
+
+# Settings page
+@app.route('/settings')
+@login_required
+def settings():
+    # Mock user settings data
+    user_settings = {
+        'theme': 'system',
+        'language': 'en-US',
+        'notifications': {
+            'email': True,
+            'push': True,
+            'weekly_report': True
+        },
+        'privacy': {
+            'profile_public': False,
+            'activity_status': True
+        }
+    }
+    
+    return render_template('settings.html',
+                         current_user=current_user,
+                         user_settings=user_settings,
+                         current_year=date.today().year)
+
+# Update settings API
+@app.route('/api/settings/update', methods=['POST'])
+@login_required
+def update_settings():
+    if not request.is_json:
+        return jsonify({'error': 'Missing JSON in request'}), 400
+    
+    # In a real app, you would validate and save these settings to a database
+    settings_data = request.get_json()
+    
+    # Example: Update theme preference
+    if 'theme' in settings_data:
+        # Save to user's session or database
+        pass
+    
+    return jsonify({
+        'status': 'success',
+        'message': 'Settings updated successfully',
+        'data': settings_data
+    })
+
+# Upload profile picture
+@app.route('/api/upload/avatar', methods=['POST'])
+@login_required
+def upload_avatar():
+    if 'avatar' not in request.files:
+        return jsonify({'error': 'No file part'}), 400
+    
+    file = request.files['avatar']
+    if file.filename == '':
+        return jsonify({'error': 'No selected file'}), 400
+    
+    if file:
+        # In a real app, you would:
+        # 1. Validate the file type and size
+        # 2. Process/resize the image
+        # 3. Save it to a file storage service
+        # 4. Update the user's avatar URL in the database
+        
+        # For demo purposes, we'll just return a success message
+        return jsonify({
+            'status': 'success',
+            'message': 'Avatar uploaded successfully',
+            'url': url_for('static', filename='avatars/' + secure_filename(file.filename))
+        })
+    
+    return jsonify({'error': 'File upload failed'}), 500
+
+# Update profile information
+@app.route('/api/profile/update', methods=['POST'])
+@login_required
+def update_profile():
+    data = request.get_json()
+    
+    # In a real app, you would:
+    # 1. Validate the input data
+    # 2. Update the user's profile in the database
+    # 3. Return the updated profile data
+    
+    return jsonify({
+        'status': 'success',
+        'message': 'Profile updated successfully',
+        'data': data
+    })
+
+# Change password
+@app.route('/api/password/change', methods=['POST'])
+@login_required
+def change_password():
+    data = request.get_json()
+    
+    # In a real app, you would:
+    # 1. Verify the current password
+    # 2. Validate the new password
+    # 3. Update the password in the database
+    # 4. Invalidate any active sessions if needed
+    
+    return jsonify({
+        'status': 'success',
+        'message': 'Password changed successfully'
+    })
+
+# Delete account
+@app.route('/api/account/delete', methods=['POST'])
+@login_required
+def delete_account():
+    # In a real app, you would:
+    # 1. Verify the user's identity (e.g., require password)
+    # 2. Soft delete or anonymize the account data
+    # 3. Clean up any associated resources
+    # 4. Log the user out and redirect to the home page
+    
+    return jsonify({
+        'status': 'success',
+        'message': 'Account scheduled for deletion',
+        'redirect': url_for('index')
+    })
+
+# Login page (placeholder)
+@app.route('/login')
+def login():
+    return redirect(url_for('index'))
+
+# Logout (placeholder)
+@app.route('/logout')
+def logout():
+    return redirect(url_for('index'))
+
+# Serve sitemap.xml
+@app.route('/sitemap.xml')
+def serve_sitemap():
+    return send_from_directory(app.static_folder, 'sitemap.xml')
+
+# Service Worker
+@app.route('/sw.js')
+def serve_sw():
+    return send_from_directory(app.static_folder, 'sw.js')
+
+# Offline page
+@app.route('/offline')
+def offline():
+    return render_template('offline.html')
+
+# Web App Manifest
+@app.route('/site.webmanifest')
+def serve_manifest():
+    return send_from_directory(app.static_folder, 'site.webmanifest')
+
 @app.route('/chat')
 def chat():
     transcript = session.get('transcript', '')
@@ -553,5 +758,9 @@ def set_language():
     return redirect(request.referrer or url_for('index'))
 
 if __name__ == '__main__':
+    # Create necessary directories
+    os.makedirs(os.path.join(app.static_folder, 'images'), exist_ok=True)
+    
+    # Run the app
     app.run(host='0.0.0.0', port=5001, debug=True)
 

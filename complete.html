@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Video Transcriber</title>
+    <style>
+        /* Base styles */
+        *, *::before, *::after {
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f8f9fa;
+            color: #333;
+            line-height: 1.6;
+        }
+        
+        /* Layout */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 15px;
+        }
+        
+        header {
+            background-color: #fff;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            padding: 15px 0;
+        }
+        
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+            text-decoration: none;
+        }
+        
+        main {
+            padding: 40px 0;
+        }
+        
+        .page-title {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        
+        h1 {
+            font-size: 36px;
+            margin: 0 0 10px;
+        }
+        
+        .subtitle {
+            font-size: 18px;
+            color: #6c757d;
+            margin: 0;
+        }
+        
+        /* Card styles */
+        .card {
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            margin-bottom: 30px;
+        }
+        
+        /* Tab system */
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        .tab-button {
+            padding: 15px 20px;
+            background: none;
+            border: none;
+            border-bottom: 3px solid transparent;
+            font-size: 16px;
+            font-weight: 600;
+            color: #6c757d;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            flex-grow: 1;
+            text-align: center;
+            outline: none;
+        }
+        
+        .tab-button.active {
+            color: #0d6efd;
+            border-bottom-color: #0d6efd;
+        }
+        
+        .tab-button:hover:not(.active) {
+            border-bottom-color: #dee2e6;
+            color: #495057;
+        }
+        
+        .tab-button i {
+            margin-right: 8px;
+        }
+        
+        .tab-content {
+            display: none;
+            padding: 30px;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        /* Upload area */
+        .upload-area {
+            border: 2px dashed #dee2e6;
+            border-radius: 10px;
+            padding: 40px;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            background-color: #f8f9fa;
+        }
+        
+        .upload-area:hover {
+            border-color: #0d6efd;
+        }
+        
+        .upload-icon {
+            font-size: 48px;
+            color: #0d6efd;
+            margin-bottom: 20px;
+        }
+        
+        .upload-title {
+            font-size: 20px;
+            margin-bottom: 10px;
+        }
+        
+        .upload-subtitle {
+            color: #6c757d;
+            margin-bottom: 20px;
+        }
+        
+        .btn {
+            display: inline-block;
+            font-weight: 600;
+            text-align: center;
+            white-space: nowrap;
+            vertical-align: middle;
+            user-select: none;
+            border: 1px solid transparent;
+            padding: 10px 20px;
+            font-size: 16px;
+            line-height: 1.5;
+            border-radius: 5px;
+            transition: all 0.3s ease;
+            text-decoration: none;
+        }
+        
+        .btn-primary {
+            color: #fff;
+            background-color: #0d6efd;
+            border-color: #0d6efd;
+        }
+        
+        .btn-primary:hover {
+            background-color: #0b5ed7;
+            border-color: #0a58ca;
+        }
+        
+        .browse-text {
+            color: #0d6efd;
+            font-weight: 600;
+        }
+        
+        /* Forms */
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-control {
+            display: block;
+            width: 100%;
+            padding: 10px 15px;
+            font-size: 16px;
+            line-height: 1.5;
+            color: #495057;
+            background-color: #fff;
+            background-clip: padding-box;
+            border: 1px solid #ced4da;
+            border-radius: 5px;
+            transition: border-color 0.15s ease-in-out;
+        }
+        
+        .form-control:focus {
+            border-color: #86b7fe;
+            outline: 0;
+            box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+        }
+        
+        /* Footer */
+        footer {
+            background-color: #f8f9fa;
+            border-top: 1px solid #dee2e6;
+            padding: 20px 0;
+            text-align: center;
+            color: #6c757d;
+        }
+        
+        /* Utilities */
+        .hidden {
+            display: none !important;
+        }
+        
+        /* File input styling */
+        input[type="file"] {
+            position: absolute;
+            width: 0;
+            height: 0;
+            opacity: 0;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div class="header-content">
+                <a href="/" class="logo">🎤 AI Transcriber</a>
+            </div>
+        </div>
+    </header>
+    
+    <main>
+        <div class="container">
+            <div class="page-title">
+                <h1>AI Video Transcriber</h1>
+                <p class="subtitle">Modern UI with tab switching functionality</p>
+            </div>
+            
+            <div class="card">
+                <!-- Tabs -->
+                <div class="tabs">
+                    <button type="button" class="tab-button active" data-target="upload-file">
+                        <i>📁</i> Upload File
+                    </button>
+                    <button type="button" class="tab-button" data-target="from-url">
+                        <i>🔗</i> From URL
+                    </button>
+                    <button type="button" class="tab-button" data-target="google-drive">
+                        <i>📝</i> Google Drive
+                    </button>
+                </div>
+                
+                <!-- Tab Content -->
+                <div id="upload-file" class="tab-content active">
+                    <form id="uploadForm">
+                        <div class="upload-area" id="dropZone">
+                            <div class="upload-icon">📤</div>
+                            <h3 class="upload-title">Drag & drop your file here</h3>
+                            <p class="upload-subtitle">or <span class="browse-text">browse files</span></p>
+                            <button type="button" id="browseBtn" class="btn btn-primary">Choose File</button>
+                            <input type="file" id="fileInput" accept="audio/*,video/*">
+                        </div>
+                        
+                        <div id="filePreview" style="margin-top: 20px; display: none;">
+                            <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; display: flex; align-items: center; justify-content: space-between;">
+                                <div>
+                                    <p style="margin: 0; font-weight: bold;" id="previewFileName"></p>
+                                    <p style="margin: 0; color: #6c757d; font-size: 14px;" id="previewFileSize"></p>
+                                </div>
+                                <button type="button" id="removeFileBtn" style="background: none; border: none; color: #dc3545; cursor: pointer;">✕</button>
+                            </div>
+                        </div>
+                        
+                        <div style="margin-top: 20px;">
+                            <button type="submit" id="submitBtn" class="btn btn-primary" style="width: 100%; display: flex; justify-content: center; align-items: center;" disabled>
+                                <span id="submitText">Transcribe</span>
+                                <div id="loadingIcon" style="margin-left: 10px; display: none;">⟳</div>
+                            </button>
+                        </div>
+                        
+                        <div id="uploadProgress" style="margin-top: 15px; display: none;">
+                            <div style="background-color: #e9ecef; height: 8px; border-radius: 4px; overflow: hidden;">
+                                <div id="progressBar" style="background-color: #0d6efd; height: 100%; width: 0%;"></div>
+                            </div>
+                            <div style="display: flex; justify-content: flex-end; font-size: 14px; color: #6c757d; margin-top: 5px;">
+                                <span id="progressPercent">0%</span>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                
+                <div id="from-url" class="tab-content">
+                    <h3 class="upload-title">Enter Video/Audio URL</h3>
+                    <p class="upload-subtitle">Paste a link to YouTube, Vimeo, or other media URL</p>
+                    <div class="form-group">
+                        <input type="url" class="form-control" placeholder="https://example.com/video.mp4">
+                    </div>
+                    <button type="button" class="btn btn-primary">Transcribe</button>
+                </div>
+                
+                <div id="google-drive" class="tab-content">
+                    <h3 class="upload-title">Connect to Google Drive</h3>
+                    <p class="upload-subtitle">Access and transcribe files from your Google Drive</p>
+                    <button type="button" class="btn btn-primary">Connect to Google Drive</button>
+                </div>
+            </div>
+        </div>
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 AI Video Transcriber</p>
+        </div>
+    </footer>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Tab switching
+            const tabButtons = document.querySelectorAll('.tab-button');
+            const tabContents = document.querySelectorAll('.tab-content');
+            
+            tabButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    // Deactivate all tabs
+                    tabButtons.forEach(btn => btn.classList.remove('active'));
+                    tabContents.forEach(content => content.classList.remove('active'));
+                    
+                    // Activate clicked tab
+                    button.classList.add('active');
+                    const targetId = button.getAttribute('data-target');
+                    document.getElementById(targetId).classList.add('active');
+                });
+            });
+            
+            // Form submission handling
+            const uploadForm = document.getElementById('uploadForm');
+            if (uploadForm) {
+                uploadForm.addEventListener('submit', function(event) {
+                    event.preventDefault(); // Prevent actual form submission
+                    
+                    const fileInput = document.getElementById('fileInput');
+                    const files = fileInput.files;
+                    
+                    if (files.length === 0) {
+                        alert('Please select a file to upload.');
+                        return;
+                    }
+                    
+                    // Show progress UI
+                    const loadingIcon = document.getElementById('loadingIcon');
+                    const submitText = document.getElementById('submitText');
+                    const uploadProgress = document.getElementById('uploadProgress');
+                    const progressBar = document.getElementById('progressBar');
+                    const progressPercent = document.getElementById('progressPercent');
+                    const submitBtn = document.getElementById('submitBtn');
+                    
+                    if (submitText) submitText.textContent = 'Processing...';
+                    if (loadingIcon) loadingIcon.style.display = 'inline-block';
+                    if (uploadProgress) uploadProgress.style.display = 'block';
+                    if (submitBtn) submitBtn.disabled = true;
+                    
+                    // Prepare form data for upload
+                    const formData = new FormData();
+                    formData.append('file', files[0]);
+                    
+                    // Create the XHR request
+                    const xhr = new XMLHttpRequest();
+                    xhr.open('POST', '/api/upload', true);
+                    
+                    // Setup progress handling
+                    xhr.upload.onprogress = function(event) {
+                        if (event.lengthComputable) {
+                            const percentComplete = Math.round((event.loaded / event.total) * 100);
+                            if (progressBar) progressBar.style.width = percentComplete + '%';
+                            if (progressPercent) progressPercent.textContent = percentComplete + '%';
+                        }
+                    };
+                    
+                    // Handle completion
+                    xhr.onload = function() {
+                        if (xhr.status === 200) {
+                            try {
+                                const response = JSON.parse(xhr.responseText);
+                                showResults(response);
+                            } catch (e) {
+                                alert('Error parsing server response');
+                                resetUploadUI();
+                            }
+                        } else {
+                            alert('Upload failed. Please try again.');
+                            resetUploadUI();
+                        }
+                    };
+                    
+                    // Handle errors
+                    xhr.onerror = function() {
+                        alert('Upload failed due to network error. Please try again.');
+                        resetUploadUI();
+                    };
+                    
+                    // Send the request
+                    xhr.send(formData);
+                });
+            }
+            
+            // Reset the upload UI elements
+            function resetUploadUI() {
+                const loadingIcon = document.getElementById('loadingIcon');
+                const submitText = document.getElementById('submitText');
+                const uploadProgress = document.getElementById('uploadProgress');
+                const submitBtn = document.getElementById('submitBtn');
+                
+                if (submitText) submitText.textContent = 'Transcribe';
+                if (loadingIcon) loadingIcon.style.display = 'none';
+                if (uploadProgress) uploadProgress.style.display = 'none';
+                if (submitBtn) submitBtn.disabled = false;
+            }
+            
+            // Function to show transcription results
+            function showResults(response) {
+                // Create a results section if it doesn't exist
+                let resultsSection = document.getElementById('resultsSection');
+                if (!resultsSection) {
+                    resultsSection = document.createElement('div');
+                    resultsSection.id = 'resultsSection';
+                    resultsSection.className = 'card';
+                    document.querySelector('main').appendChild(resultsSection);
+                }
+                
+                // Get the file name and transcript from the server response
+                const fileName = response ? response.filename : document.getElementById('fileInput').files[0].name;
+                const transcript = response ? response.transcript : 'No transcript available.';
+                
+                resultsSection.innerHTML = `
+                    <div class="card-header">
+                        <h2>Transcription Results</h2>
+                    </div>
+                    <div class="card-body">
+                        <div style="padding: 15px; background-color: #f8f9fa; border-radius: 5px; margin-bottom: 15px;">
+                            <h3 style="font-weight: bold; margin-bottom: 10px;">File: ${fileName}</h3>
+                            <div style="padding: 15px; background-color: white; border-radius: 5px; border: 1px solid #dee2e6;">
+                                <pre style="white-space: pre-wrap; font-size: 14px;">${transcript}</pre>
+                            </div>
+                        </div>
+                        <div style="display: flex; justify-content: flex-end;">
+                            <button class="btn btn-primary" onclick="downloadTranscript('${fileName}', '${transcript.replace(/'/g, "\\'")}')">Download Transcript</button>
+                        </div>
+                    </div>
+                `;
+                
+                // Scroll to results
+                resultsSection.scrollIntoView({ behavior: 'smooth' });
+                
+                // Reset form UI
+                resetUploadUI();
+            }
+            
+            // Function to download transcript as text file
+            function downloadTranscript(fileName, transcript) {
+                const element = document.createElement('a');
+                const fileNameWithoutExt = fileName.split('.').slice(0, -1).join('.') || fileName;
+                const transcriptBlob = new Blob([transcript], {type: 'text/plain'});
+                
+                element.setAttribute('href', URL.createObjectURL(transcriptBlob));
+                element.setAttribute('download', fileNameWithoutExt + '_transcript.txt');
+                
+                element.style.display = 'none';
+                document.body.appendChild(element);
+                
+                element.click();
+                
+                document.body.removeChild(element);
+            }
+            
+            function generateFakeTranscript() {
+                const paragraphs = [
+                    "Welcome to our presentation on artificial intelligence and machine learning. Today, we'll explore how these technologies are transforming industries across the globe.",
+                    "First, let's define what we mean by AI. Artificial intelligence refers to the simulation of human intelligence in machines that are programmed to think and learn like humans. This includes problem-solving, recognizing speech, and making decisions.",
+                    "Machine learning, a subset of AI, uses algorithms to parse data, learn from it, and make informed decisions. The key difference is that with machine learning, computers learn without being explicitly programmed.",
+                    "Deep learning takes this a step further by using neural networks with many layers. This architecture allows the system to learn complex patterns in large amounts of data.",
+                    "Now, let's look at some real-world applications. In healthcare, AI is being used to diagnose diseases from medical imaging with accuracy rivaling human doctors. In finance, it's detecting fraudulent transactions in real-time.",
+                    "The transportation industry is being revolutionized with self-driving vehicles. Companies like Tesla, Waymo, and Uber are investing heavily in this technology.",
+                    "However, with these advancements come challenges and ethical considerations. Privacy concerns, potential job displacement, and algorithmic bias are just some of the issues we need to address.",
+                    "In conclusion, AI and machine learning are not just futuristic concepts but present-day tools transforming our world. Understanding their capabilities and limitations is essential for navigating our increasingly automated future."
+                ];
+                
+                return paragraphs.join('\n\n');
+            }
+            
+            // File upload functionality
+            const dropZone = document.getElementById('dropZone');
+            const fileInput = document.getElementById('fileInput');
+            const browseBtn = document.getElementById('browseBtn');
+            
+            if (browseBtn && fileInput) {
+                browseBtn.addEventListener('click', () => {
+                    fileInput.click();
+                });
+            }
+            
+            if (dropZone && fileInput) {
+                // Prevent default behaviors
+                ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                    dropZone.addEventListener(eventName, preventDefaults, false);
+                });
+                
+                // Highlight drop zone when dragging over it
+                ['dragenter', 'dragover'].forEach(eventName => {
+                    dropZone.addEventListener(eventName, highlight, false);
+                });
+                
+                ['dragleave', 'drop'].forEach(eventName => {
+                    dropZone.addEventListener(eventName, unhighlight, false);
+                });
+                
+                // Handle dropped files
+                dropZone.addEventListener('drop', handleDrop, false);
+                
+                // Handle selected files
+                fileInput.addEventListener('change', handleFiles, false);
+            }
+            
+            function preventDefaults(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            
+            function highlight() {
+                dropZone.classList.add('highlight');
+            }
+            
+            function unhighlight() {
+                dropZone.classList.remove('highlight');
+            }
+            
+            function handleDrop(e) {
+                const dt = e.dataTransfer;
+                const files = dt.files;
+                handleFiles(files);
+            }
+            
+            function handleFiles(e) {
+                const files = e.target?.files || e;
+                if (files.length > 0) {
+                    console.log('File selected:', files[0].name);
+                    
+                    // Update UI to show file selected
+                    const fileNameElement = document.getElementById('fileName');
+                    const filePreview = document.getElementById('filePreview');
+                    const previewFileName = document.getElementById('previewFileName');
+                    const previewFileSize = document.getElementById('previewFileSize');
+                    const submitBtn = document.getElementById('submitBtn');
+                    
+                    if (fileNameElement) fileNameElement.textContent = files[0].name;
+                    
+                    if (filePreview && previewFileName && previewFileSize) {
+                        filePreview.classList.remove('hidden');
+                        previewFileName.textContent = files[0].name;
+                        
+                        // Format file size
+                        const size = files[0].size;
+                        let fileSize = '';
+                        if (size < 1024) {
+                            fileSize = size + ' bytes';
+                        } else if (size < 1024 * 1024) {
+                            fileSize = (size / 1024).toFixed(2) + ' KB';
+                        } else {
+                            fileSize = (size / (1024 * 1024)).toFixed(2) + ' MB';
+                        }
+                        
+                        previewFileSize.textContent = fileSize;
+                    }
+                    
+                    // Enable submit button
+                    if (submitBtn) submitBtn.removeAttribute('disabled');
+                }
+            }
+        });
+    </script>
+</body>
+</html>

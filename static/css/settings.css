@@ -1,0 +1,237 @@
+/* Settings Page Styles */
+
+/* Base Styles */
+.setting-group {
+    @apply bg-white dark:bg-gray-800 rounded-xl p-6 mb-6 shadow-sm border border-gray-100 dark:border-gray-700;
+    transition: all 0.2s ease-in-out;
+}
+
+.setting-group:hover {
+    @apply shadow-md;
+}
+
+/* Form Elements */
+.form-group {
+    @apply mb-6;
+}
+
+.form-label {
+    @apply block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2;
+}
+
+.form-input,
+.form-select,
+.form-textarea {
+    @apply w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg 
+           bg-white dark:bg-gray-700 text-gray-900 dark:text-white 
+           focus:ring-2 focus:ring-primary-500 focus:border-transparent 
+           transition duration-200 ease-in-out;
+}
+
+.form-input:disabled,
+.form-select:disabled,
+.form-textarea:disabled {
+    @apply bg-gray-100 dark:bg-gray-700 cursor-not-allowed opacity-70;
+}
+
+/* Toggle Switch */
+.toggle-switch {
+    @apply relative inline-flex items-center cursor-pointer;
+}
+
+.toggle-switch input {
+    @apply sr-only;
+}
+
+.toggle-switch .slider {
+    @apply w-11 h-6 bg-gray-200 dark:bg-gray-600 rounded-full 
+           relative transition-all duration-300;
+}
+
+.toggle-switch .slider:before {
+    content: '';
+    @apply absolute left-1 top-1/2 -translate-y-1/2 w-4 h-4 bg-white 
+           rounded-full transition-all duration-300 shadow-sm;
+}
+
+.toggle-switch input:checked + .slider {
+    @apply bg-primary-600;
+}
+
+.toggle-switch input:checked + .slider:before {
+    @apply transform translate-x-5;
+}
+
+/* Tabs */
+.tab-button {
+    @apply px-6 py-3 text-sm font-medium text-gray-500 dark:text-gray-400 
+           hover:text-primary-600 dark:hover:text-primary-400 
+           border-b-2 border-transparent hover:border-gray-300 dark:hover:border-gray-600 
+           transition-all duration-200;
+}
+
+.tab-button.active {
+    @apply text-primary-600 dark:text-primary-400 border-primary-500;
+}
+
+/* Buttons */
+.btn {
+    @apply inline-flex items-center justify-center px-4 py-2 rounded-lg 
+           font-medium transition-all duration-200 focus:outline-none 
+           focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 
+           disabled:opacity-70 disabled:cursor-not-allowed;
+}
+
+.btn-primary {
+    @apply bg-primary-600 text-white hover:bg-primary-700 
+           focus:ring-primary-500 focus:ring-offset-white dark:focus:ring-offset-gray-800;
+}
+
+.btn-outline {
+    @apply border border-gray-300 dark:border-gray-600 
+           text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700;
+}
+
+.btn-text {
+    @apply text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white 
+           focus:ring-0 focus:ring-offset-0;
+}
+
+.btn-danger {
+    @apply bg-red-600 text-white hover:bg-red-700 
+           focus:ring-red-500 focus:ring-offset-white dark:focus:ring-offset-gray-800;
+}
+
+/* Toast Notifications */
+.toast {
+    @apply fixed right-4 bottom-4 px-6 py-4 rounded-lg shadow-lg 
+           flex items-center text-white max-w-sm z-50 
+           transform translate-x-0 opacity-100 transition-all duration-300;
+}
+
+.toast.hide {
+    @apply transform translate-x-full opacity-0;
+}
+
+.toast i {
+    @apply mr-3 text-xl;
+}
+
+.toast-close {
+    @apply ml-4 text-white opacity-70 hover:opacity-100 text-xl;
+}
+
+.toast-success {
+    @apply bg-green-600;
+}
+
+.toast-error {
+    @apply bg-red-600;
+}
+
+.toast-warning {
+    @apply bg-yellow-600;
+}
+
+.toast-info {
+    @apply bg-blue-600;
+}
+
+/* Tooltips */
+.tooltip {
+    @apply absolute z-10 invisible inline-block px-3 py-2 text-sm font-medium text-white 
+           bg-gray-900 rounded-lg shadow-sm opacity-0 transition-opacity duration-200 
+           whitespace-nowrap pointer-events-none;
+    bottom: 125%;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.tooltip.show {
+    @apply visible opacity-100;
+}
+
+.tooltip::after {
+    content: '';
+    @apply absolute top-full left-1/2 -ml-1.5 border-4 border-solid 
+           border-transparent border-t-gray-900;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+    .tab-button {
+        @apply px-4 py-3 text-xs;
+    }
+    
+    .setting-group {
+        @apply p-4;
+    }
+    
+    .form-group {
+        @apply mb-4;
+    }
+}
+
+/* Dark mode overrides */
+.dark .form-input,
+.dark .form-select,
+.dark .form-textarea {
+    @apply bg-gray-700 border-gray-600 text-white;
+}
+
+.dark .form-input:focus,
+.dark .form-select:focus,
+.dark .form-textarea:focus {
+    @apply border-transparent ring-2 ring-primary-500;
+}
+
+.dark .btn-outline {
+    @apply border-gray-600 text-gray-200 hover:bg-gray-700;
+}
+
+.dark .tooltip {
+    @apply bg-gray-700;
+}
+
+.dark .tooltip::after {
+    border-top-color: #374151; /* gray-700 */
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.tab-content {
+    animation: fadeIn 0.3s ease-out;
+}
+
+/* Custom scrollbar for settings panel */
+.settings-panel {
+    scrollbar-width: thin;
+    scrollbar-color: #9ca3af #f3f4f6;
+}
+
+.dark .settings-panel {
+    scrollbar-color: #4b5563 #1f2937;
+}
+
+.settings-panel::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+.settings-panel::-webkit-scrollbar-track {
+    @apply bg-gray-100 dark:bg-gray-800;
+    border-radius: 3px;
+}
+
+.settings-panel::-webkit-scrollbar-thumb {
+    @apply bg-gray-400 dark:bg-gray-600;
+    border-radius: 3px;
+}
+
+.settings-panel::-webkit-scrollbar-thumb:hover {
+    @apply bg-gray-500 dark:bg-gray-500;
+}

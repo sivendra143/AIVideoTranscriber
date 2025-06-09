@@ -1,0 +1,48 @@
+# Allow all web crawlers to access all parts of the site
+User-agent: *
+Allow: /
+
+# Sitemap location
+Sitemap: https://your-app-url.com/sitemap.xml
+
+# Crawl-delay parameter to limit request rate (in seconds)
+Crawl-delay: 10
+
+# Disallow crawling of admin and API endpoints
+Disallow: /admin/
+Disallow: /api/
+Disallow: /private/
+
+# Allow all crawlers for the rest of the site
+User-agent: *
+Allow: /
+
+# Block specific crawlers that might be too aggressive
+User-agent: AhrefsBot
+Disallow: /
+
+User-agent: SemrushBot
+Disallow: /
+
+# Allow Google and Bing to crawl AJAX and URL fragments
+User-agent: Googlebot
+Allow: /*.js
+Allow: /*.css
+Allow: /*.png
+Allow: /*.jpg
+Allow: /*.jpeg
+Allow: /*.gif
+
+User-agent: bingbot
+Allow: /*.js
+Allow: /*.css
+Allow: /*.png
+Allow: /*.jpg
+Allow: /*.jpeg
+Allow: /*.gif
+
+# Mobile sitemap
+Sitemap: https://your-app-url.com/sitemap-mobile.xml
+
+# Image sitemap
+Sitemap: https://your-app-url.com/sitemap-image.xml
