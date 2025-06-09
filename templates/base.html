@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="{{ detected_language.code if detected_language else 'en' }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}VideoTranscriber{% endblock %}</title>
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAAXNSR0IArs4c6QAABJBJREFUWEe9l21sU1UYx//n3t7e3r5s3dbeQbeuZe1g68DhNgLTgGCYmAiJfCAhRD9o/KIJMZFEjYmJiYkfNPrFD34wJCbGGBM1JIbEEIQgAzZlRjcZbGyw9Y3Rrt3WbnR9u/f4oeu6tV0pFcL5dM95zvP8z/M/z3nOJZjnGBgYcFZXV+/geT6AJVoul7vd1dU1MZcbmWvRyMiIzWw2H+Y4bj8hxDjXuoXmCSHpTCbzUWtr6+BsbGYFCIVCzwghHwghKhYSfL41hBBfIpE40NHRcfVu9ncFCIfDG1Kp1I9Wi6V+vqDz2aVSqWGn07k1GAz+NZPtjADhcNgWj8cvWa3WtvkCLcQuFosFnU5nRzAYTM20bkYAv9//icVieWkhQRZrk0gkPm9vb39tpvV3AIRCoVcIIZ8uNsB/rSeEvNnR0fHFdJs7AMLh8KZkMnnRYDDwiwFACFGl0+mRbDZbRQixEkJUhJA0z/NJo9E4pNfrx5qbm0cWCpJIJIZcLtd9wWAwe9u+FCAUCnFarfaK3W5vXEiA/Hh4S+Fw+J/ZbP6qlGM+nz8zODj4bFtb2+BSFJBKpV7s6OgoXuyDEHK4s7PzuVtzBYBAILDJYrH8UMppJBK5fP369R0ej+fPpQIYGxvb5na7tweDwWvFfkwm0+ZAIHBhCiAYDKpVKtWo0+msLeU0HA7/0dbW1riUAIQQEo1Gh10uV10wGIwX2+v1+hGDwVBdAAgEAi9YrdZPS53z8fHxkEajqTEajZqlBGCxWCxhMBhcJpMpUOzHarW+6PP5Pp4C8Pv9p202W3cpAJPJdEGr1TYsNYDdbj/j8XgeL/aj0+m+9Xq9e6YA/H7/kM1ma1gKAIfDMeB2u9cvNYDT6Rz0eDyNxX7MZvOw1WqtnwLw+/2jdru9dikAnE7nqMfjqVsqAEKIJBaLjblcrtpiP3a7fcxms9VMAUQikYTdbrcvBYDL5Yq43e7apQIQBCGZTCYdxX5sNlvCbrfbpgBGR0ez1dXVqqUAqKmpyVZVVS0ZQCaTyRJCpgHkcjlOqVRmlwJAoVBkOY5bMgBRFLOEEMUUgCiKnEwmy5YCIJfLc1KpdMkARFHkCCHcFIAoijKZTCYsBYBUKhVkMtmSA0m1Wq0rlcr7iwGUSuWYSqVqWgoAlUo1plKpWooBVCrViFqt3rAUAGq1ekStVm8sBtBoNFc1Gs2mpQDQaDRXNBrN5mIAjUZzSavVPrIUAFqt9pJWq92SDKBVan/RarVPLQWATqf7WafTPj3d9m+FS+j+Wm2ZZAAAAABJRU5ErkJggg==">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Modern CSS Framework -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='modern.css') }}">
+    <!-- Legacy CSS for compatibility -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    {% block head %}{% endblock %}
+</head>
+<body>
+    <!-- Skip to content link for accessibility -->
+    <a href="#main-content" class="skip-link">Skip to content</a>
+    
+    <!-- Include welcome modal -->
+    {% include 'welcome_modal.html' %}
+    
+    <!-- Theme Toggle and Language Selector -->
+    <div class="header-controls">
+        <button class="theme-toggle" aria-label="Toggle dark/light mode">
+            <i class="fas fa-moon"></i>
+            <i class="fas fa-sun"></i>
+        </button>
+        {% include 'language_selector.html' %}
+    </div>
+    
+    <!-- Main Navigation -->
+    <nav class="navbar">
+        <a href="{{ url_for('index') }}" class="navbar-brand">
+            <i class="fas fa-video"></i> VideoTranscriber
+        </a>
+        <ul class="navbar-nav">
+            <li><a href="{{ url_for('index') }}" class="nav-link"><i class="fas fa-home"></i> Home</a></li>
+            <li><a href="{{ url_for('video_library') }}" class="nav-link"><i class="fas fa-film"></i> Video Library</a></li>
+            {% if 'transcript_file' in session %}
+                <li><a href="{{ url_for('chat') }}" class="nav-link"><i class="fas fa-comments"></i> Chat with Video</a></li>
+            {% endif %}
+            {% if not config.FEATURES.transcription %}
+                <li class="nav-warning"><i class="fas fa-exclamation-triangle"></i> Transcription Disabled</li>
+            {% endif %}
+        </ul>
+    </nav>
+    
+    <div class="container" id="main-content">
+        <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="flash-messages">
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} animate-fadeIn">
+                        <i class="fas {% if category == 'error' %}fa-exclamation-circle{% else %}fa-check-circle{% endif %}"></i>
+                        {{ message }}
+                        <button class="modal-close" onclick="this.parentElement.remove()" aria-label="Close notification">&times;</button>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+    
+    <!-- Feature Warnings -->
+    {% if not config.FEATURES.transcription %}
+    <div class="alert alert-warning">
+        <i class="fas fa-exclamation-triangle"></i>
+        <strong>Warning:</strong> Audio transcription is currently disabled. Some features may be limited.
+        Please install all required dependencies for full functionality.
+    </div>
+    {% endif %}
+        
+        <!-- Main Content -->
+        <main class="page-transition-enter-active">
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+    
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-brand">
+                    <h3><i class="fas fa-video"></i> VideoTranscriber</h3>
+                    <p>Transform your videos into actionable insights</p>
+                </div>
+                <div class="footer-links">
+                    <h4>Quick Links</h4>
+                    <ul>
+                        <li><a href="{{ url_for('index') }}">Home</a></li>
+                        <li><a href="{{ url_for('video_library') }}">Video Library</a></li>
+                        <li><a href="{{ url_for('chat') if 'transcript_file' in session else url_for('index') }}">Chat</a></li>
+                    </ul>
+                </div>
+                <div class="footer-contact">
+                    <h4>Contact</h4>
+                    <p><i class="fas fa-envelope"></i> support@videotranscriber.com</p>
+                    <p><i class="fas fa-phone"></i> +1 (555) 123-4567</p>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2025 VideoTranscriber. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+    
+    <!-- Scroll to Top Button -->
+    <button class="scroll-to-top" aria-label="Scroll to top">
+        <i class="fas fa-arrow-up"></i>
+    </button>
+    
+    <!-- Core Scripts -->
+    <script src="{{ url_for('static', filename='animations.js') }}"></script>
+    <script>
+        // Toast notification function
+        function showToast(message, type = 'info', duration = 5000) {
+            showNotification(message, type, duration);
+        }
+    </script>
+    
+    {% block scripts %}
+    <!-- Include welcome modal first -->
+    {% include 'welcome_modal.html' %}
+    <!-- Include chat functionality -->
+    <script src="{{ url_for('static', filename='chat.js') }}"></script>
+    <!-- Then include onboarding -->
+    <script src="{{ url_for('static', filename='onboarding.js') }}"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            if (!localStorage.getItem("onboarding_seen")) {
+                const tour = new OnboardingTour({
+                    steps: [
+                        {
+                            element: ".file-upload",
+                            title: "Upload Your Media",
+                            content: "Start by dragging and dropping your video or audio file here, or click to select one. We support MP4, MP3, WAV, and more!",
+                            position: "bottom",
+                            pulse: true
+                        },
+                        {
+                            element: ".radio-group",
+                            title: "Choose Your Mode",
+                            content: "Select whether you want a full transcript or just the key action points from your media.",
+                            position: "top"
+                        },
+                        {
+                            element: ".btn-primary",
+                            title: "Transcribe Now!",
+                            content: "Once your file is selected and mode is chosen, click here to start the transcription process.",
+                            position: "top",
+                            pulse: true
+                        },
+                        {
+                            element: ".navbar",
+                            title: "Navigate the App",
+                            content: "Use this navigation bar to switch between Home, Video Library, and Chat functionalities.",
+                            position: "bottom"
+                        },
+                        {
+                            element: ".features-section",
+                            title: "How It Works",
+                            content: "Scroll down to learn more about the powerful features of VideoTranscriber.",
+                            position: "top"
+                        }
+                    ],
+                    onComplete: () => {
+                        localStorage.setItem("onboarding_seen", "true");
+                    },
+                    onSkip: () => {
+                        localStorage.setItem("onboarding_seen", "true");
+                    }
+                });
+                tour.start();
+            }
+        });
+    </script>
+    {% endblock %}
+</body>
+</html>
+

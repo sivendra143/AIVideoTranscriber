@@ -1,0 +1,491 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <div class="transcriber-container animate-fadeIn">
+        <div class="transcriber-header">
+            <h1>Transform Video to Text</h1>
+            <p class="text-center mb-6">Convert your videos and audio files into searchable, analyzable text with AI-powered transcription</p>
+        </div>
+        
+        <!-- Step Indicator -->
+        <div class="transcriber-steps" aria-label="Progress: Step 1 of 3">
+            <div class="step-item active" aria-current="step">
+                <div class="step-number">1</div>
+                <div class="step-text">Upload</div>
+            </div>
+            <div class="step-item">
+                <div class="step-number">2</div>
+                <div class="step-text">Transcribe</div>
+            </div>
+            <div class="step-item">
+                <div class="step-number">3</div>
+                <div class="step-text">Analyze</div>
+            </div>
+        </div>
+        
+        <!-- Upload Form -->
+        <div class="glass-card transcriber-form animate-slideInUp">
+            <form id="uploadForm" action="{{ url_for('transcribe') }}" method="post" enctype="multipart/form-data">
+                
+                <!-- File Upload Area -->
+                <div class="file-upload">
+                    <div class="file-upload-icon">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                    </div>
+                    <div class="file-upload-text">Choose video or audio file</div>
+                    <div class="file-upload-hint">Supports MP4, MP3, WAV, and more. Max 100MB.</div>
+                    <input type="file" 
+                           name="file" 
+                           class="file-upload-input" 
+                           id="fileInput" 
+                           accept="video/*,audio/*" 
+                           required>
+                </div>
+                
+                <!-- Progress Bar (Hidden initially) -->
+                <div class="progress mt-6" id="upload-progress" style="display: none;">
+                    <div class="progress-bar" id="progress-fill" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                </div>
+                <div class="text-center mt-2" id="progress-text" style="display: none;">Initializing upload...</div>
+                
+                <!-- Mode Selection -->
+                <div class="form-group mt-8">
+                    <label class="form-label">Select Transcription Mode</label>
+                    <div class="radio-group">
+                        <label class="radio-label">
+                            <input type="radio" name="mode" value="script" class="radio-input" checked>
+                            <span class="radio-control"></span>
+                            Full Transcript
+                        </label>
+                        <label class="radio-label">
+                            <input type="radio" name="mode" value="action" class="radio-input">
+                            <span class="radio-control"></span>
+                            Action Points Only
+                        </label>
+                    </div>
+                </div>
+                
+                <!-- Submit Button -->
+                <div class="text-center mt-8">
+                    <button type="submit" class="btn btn-primary btn-lg" id="submit-btn" disabled>
+                        <i class="fas fa-microphone-alt"></i>
+                        Transcribe Now
+                    </button>
+                </div>
+            </form>
+        </div>
+        
+        <!-- Display Area for Previous Results (if any) -->
+        {% if transcript or action_points %}
+            <div class="mt-12 animate-slideInUp">
+                <h2 class="text-center">Previous Result</h2>
+                
+                <div class="glass-card mt-6">
+                    {% if transcript %}
+                        <div class="mb-6">
+                            <h3><i class="fas fa-file-alt"></i> Transcript</h3>
+                            <div class="transcription-result">
+                                {{ transcript[:300] }}{% if transcript|length > 300 %}...{% endif %}
+                            </div>
+                        </div>
+                    {% endif %}
+                    
+                    {% if action_points %}
+                        <div class="mb-6">
+                            <h3><i class="fas fa-tasks"></i> Action Points</h3>
+                            <div class="transcription-result">
+                                {{ action_points[:300] }}{% if action_points|length > 300 %}...{% endif %}
+                            </div>
+                        </div>
+                    {% endif %}
+                    
+                    <div class="transcription-actions">
+                        <a href="{{ url_for('chat') }}" class="btn btn-accent">
+                            <i class="fas fa-comments"></i>
+                            Continue to Q&A
+                        </a>
+                        <a href="#" class="btn btn-outline" onclick="downloadTranscript(event)">
+                            <i class="fas fa-download"></i>
+                            Download PDF
+                        </a>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+        
+        <!-- Features Section -->
+        <section class="mt-20 features-section" aria-labelledby="features-heading">
+            <h2 id="features-heading" class="text-center">How It Works</h2>
+            
+            <div class="grid grid-cols-4 mt-8">
+                <div class="card animate-on-scroll">
+                    <div class="card-body text-center">
+                        <div class="feature-icon">
+                            <i class="fas fa-upload"></i>
+                        </div>
+                        <h3>Upload</h3>
+                        <p>Easily upload video or audio files in various formats.</p>
+                    </div>
+                </div>
+                
+                <div class="card animate-on-scroll">
+                    <div class="card-body text-center">
+                        <div class="feature-icon">
+                            <i class="fas fa-language"></i>
+                        </div>
+                        <h3>Transcribe</h3>
+                        <p>Our advanced AI accurately converts speech to text.</p>
+                    </div>
+                </div>
+                
+                <div class="card animate-on-scroll">
+                    <div class="card-body text-center">
+                        <div class="feature-icon">
+                            <i class="fas fa-brain"></i>
+                        </div>
+                        <h3>Analyze</h3>
+                        <p>Ask questions about the content and get instant insights.</p>
+                    </div>
+                </div>
+                
+                <div class="card animate-on-scroll">
+                    <div class="card-body text-center">
+                        <div class="feature-icon">
+                            <i class="fas fa-file-export"></i>
+                        </div>
+                        <h3>Export</h3>
+                        <p>Download transcripts as PDF with summaries and key points.</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Additional Features -->
+            <div class="glass-card mt-12 animate-on-scroll">
+                <h3 class="text-center mb-6">Advanced Features</h3>
+                
+                <div class="grid grid-cols-2 gap-6">
+                    <div class="flex items-center gap-4">
+                        <div class="badge-primary">
+                            <i class="fas fa-globe"></i>
+                        </div>
+                        <div>
+                            <h4>Multi-language Support</h4>
+                            <p>Transcribe content in over 50 languages</p>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-center gap-4">
+                        <div class="badge-primary">
+                            <i class="fas fa-user-friends"></i>
+                        </div>
+                        <div>
+                            <h4>Speaker Identification</h4>
+                            <p>Automatically detect different speakers</p>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-center gap-4">
+                        <div class="badge-primary">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                        <div>
+                            <h4>Timestamps</h4>
+                            <p>Navigate to specific moments in your video</p>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-center gap-4">
+                        <div class="badge-primary">
+                            <i class="fas fa-search"></i>
+                        </div>
+                        <div>
+                            <h4>Searchable Content</h4>
+                            <p>Find exactly what you're looking for</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <!-- Testimonials Section -->
+        <section class="mt-20 animate-on-scroll">
+            <h2 class="text-center">What Our Users Say</h2>
+            
+            <div class="grid grid-cols-3 mt-8 gap-6">
+                <div class="glass-card">
+                    <div class="card-body">
+                        <div class="mb-4">
+                            <i class="fas fa-star text-yellow-500"></i>
+                            <i class="fas fa-star text-yellow-500"></i>
+                            <i class="fas fa-star text-yellow-500"></i>
+                            <i class="fas fa-star text-yellow-500"></i>
+                            <i class="fas fa-star text-yellow-500"></i>
+                        </div>
+                        <p class="mb-4">"VideoTranscriber has revolutionized how I create content. The transcription accuracy is incredible, and the Q&A feature saves me hours of work."</p>
+                        <div class="flex items-center gap-3">
+                            <div class="badge-outline">JM</div>
+                            <div>
+                                <strong>John Miller</strong>
+                                <div>Content Creator</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="glass-card">
+                    <div class="card-body">
+                        <div class="mb-4">
+                            <i class="fas fa-star text-yellow-500"></i>
+                            <i class="fas fa-star text-yellow-500"></i>
+                            <i class="fas fa-star text-yellow-500"></i>
+                            <i class="fas fa-star text-yellow-500"></i>
+                            <i class="fas fa-star text-yellow-500"></i>
+                        </div>
+                        <p class="mb-4">"As a researcher, I need accurate transcriptions of interviews. This tool not only provides that but also helps me analyze the content with its AI capabilities."</p>
+                        <div class="flex items-center gap-3">
+                            <div class="badge-outline">SP</div>
+                            <div>
+                                <strong>Sarah Parker</strong>
+                                <div>Academic Researcher</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="glass-card">
+                    <div class="card-body">
+                        <div class="mb-4">
+                            <i class="fas fa-star text-yellow-500"></i>
+                            <i class="fas fa-star text-yellow-500"></i>
+                            <i class="fas fa-star text-yellow-500"></i>
+                            <i class="fas fa-star text-yellow-500"></i>
+                            <i class="fas fa-star-half-alt text-yellow-500"></i>
+                        </div>
+                        <p class="mb-4">"The action points feature is a game-changer for our team meetings. We get clear, concise summaries of what was discussed and what needs to be done."</p>
+                        <div class="flex items-center gap-3">
+                            <div class="badge-outline">DT</div>
+                            <div>
+                                <strong>David Thompson</strong>
+                                <div>Project Manager</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <!-- Call to Action -->
+        <section class="mt-20 mb-12 text-center animate-on-scroll">
+            <div class="glass-card">
+                <h2>Ready to Transform Your Videos?</h2>
+                <p class="mb-6">Start transcribing your content today and unlock the power of your video and audio files.</p>
+                <a href="#fileInput" class="btn btn-primary btn-lg">
+                    <i class="fas fa-rocket"></i>
+                    Get Started Now
+                </a>
+            </div>
+        </section>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+    {{ super() }}
+    <script>
+        // Initialize steps and form interactions
+        document.addEventListener("DOMContentLoaded", function() {
+            // File input handling
+            const fileInput = document.getElementById("fileInput");
+            const fileUpload = document.querySelector(".file-upload");
+            const fileNameDisplay = document.querySelector(".file-upload-text");
+            const submitBtn = document.getElementById("submit-btn");
+            const progressBar = document.getElementById("upload-progress");
+            const progressFill = document.getElementById("progress-fill");
+            const progressText = document.getElementById("progress-text");
+            
+            if (fileInput && fileUpload && fileNameDisplay && submitBtn) {
+                fileInput.addEventListener("change", function(e) {
+                    handleFileSelect(e.target.files[0]);
+                });
+                
+                // Smooth scroll to upload section when "Get Started" is clicked
+                document.querySelectorAll('a[href="#fileInput"]').forEach(link => {
+                    link.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        fileUpload.scrollIntoView({ behavior: 'smooth' });
+                        // Add pulse animation to highlight the upload area
+                        fileUpload.classList.add('animate-pulse');
+                        setTimeout(() => {
+                            fileUpload.classList.remove('animate-pulse');
+                        }, 2000);
+                    });
+                });
+            }
+            
+            function handleFileSelect(file) {
+                if (file) {
+                    // Basic validation
+                    const maxSize = 100 * 1024 * 1024; // 100MB
+                    if (file.size > maxSize) {
+                        showToast("File size exceeds 100MB limit.", "error");
+                        fileInput.value = ""; // Clear the input
+                        fileNameDisplay.innerHTML = `<i class="fas fa-exclamation-triangle"></i> File too large`;
+                        fileNameDisplay.classList.add("error");
+                        submitBtn.disabled = true;
+                        return;
+                    }
+                    
+                    fileNameDisplay.innerHTML = `<i class="fas fa-check-circle"></i> ${file.name}`;
+                    fileNameDisplay.classList.add("file-selected");
+                    submitBtn.disabled = false;
+                    
+                    // Add pulse animation to submit button
+                    submitBtn.classList.add('animate-pulse');
+                    setTimeout(() => {
+                        submitBtn.classList.remove('animate-pulse');
+                    }, 2000);
+                } else {
+                    fileNameDisplay.innerHTML = `Choose video or audio file`;
+                    fileNameDisplay.classList.remove("file-selected");
+                    submitBtn.disabled = true;
+                }
+            }
+            
+            // Form submission handling
+            const form = document.getElementById("uploadForm");
+            if (form) {
+                form.addEventListener("submit", handleFormSubmit);
+            }
+            
+            // Download transcript function
+            window.downloadTranscript = function(e) {
+                e.preventDefault();
+                showToast("Preparing PDF for download...", "info");
+                
+                // Simulate download delay
+                setTimeout(() => {
+                    fetch("{{ url_for('download_transcript') }}")
+                        .then(response => {
+                            if (response.ok) return response.blob();
+                            throw new Error("Network response was not ok");
+                        })
+                        .then(blob => {
+                            const url = window.URL.createObjectURL(blob);
+                            const a = document.createElement("a");
+                            a.style.display = "none";
+                            a.href = url;
+                            a.download = "transcript.pdf";
+                            document.body.appendChild(a);
+                            a.click();
+                            window.URL.revokeObjectURL(url);
+                            showToast("Download complete!", "success");
+                        })
+                        .catch(error => {
+                            console.error("Download error:", error);
+                            showToast("Error downloading transcript. Please try again.", "error");
+                        });
+                }, 800);
+            };
+        });
+        
+        // AJAX Form Submission
+        async function handleFormSubmit(e) {
+            e.preventDefault();
+            
+            const form = e.target;
+            const formData = new FormData(form);
+            const submitBtn = form.querySelector("#submit-btn");
+            const originalBtnText = submitBtn.innerHTML;
+            const progressBar = document.getElementById("upload-progress");
+            const progressFill = document.getElementById("progress-fill");
+            const progressText = document.getElementById("progress-text");
+            
+            // Update step indicator
+            window.updateSteps(1);
+            
+            // Show loading state
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Processing...`;
+            progressBar.style.display = "block";
+            progressText.style.display = "block";
+            progressFill.style.width = "0%";
+            
+            try {
+                // Use XMLHttpRequest for progress tracking
+                const xhr = new XMLHttpRequest();
+                
+                xhr.upload.addEventListener("progress", function(event) {
+                    if (event.lengthComputable) {
+                        const percentComplete = Math.round((event.loaded / event.total) * 100);
+                        progressFill.style.width = `${percentComplete}%`;
+                        progressText.textContent = `Uploading... ${percentComplete}%`;
+                    }
+                });
+                
+                xhr.addEventListener("load", function() {
+                    progressText.textContent = "Processing transcript...";
+                    progressFill.style.width = "100%";
+                    
+                    // Update step indicator to processing
+                    window.updateSteps(2);
+                    
+                    if (xhr.status >= 200 && xhr.status < 300) {
+                        try {
+                            const data = JSON.parse(xhr.responseText);
+                            if (data.status === "success" && data.redirect) {
+                                progressText.textContent = "Transcription complete! Redirecting...";
+                                
+                                // Update step indicator to complete
+                                window.updateSteps(3);
+                                
+                                setTimeout(() => {
+                                    window.location.href = data.redirect;
+                                }, 1000);
+                            } else {
+                                throw new Error(data.message || "Unexpected response format.");
+                            }
+                        } catch (parseError) {
+                            console.error("Error parsing response:", parseError);
+                            showToast("Received an invalid response from the server.", "error");
+                            resetFormState();
+                        }
+                    } else {
+                        let errorMsg = "An unknown error occurred.";
+                        try {
+                            const errorData = JSON.parse(xhr.responseText);
+                            errorMsg = errorData.message || errorData.error || `Server error: ${xhr.status}`;
+                        } catch (e) { 
+                            errorMsg = `Server error: ${xhr.status}. Please check server logs.`;
+                        }
+                        console.error("Server error:", xhr.status, xhr.responseText);
+                        showToast(errorMsg, "error");
+                        resetFormState();
+                    }
+                });
+                
+                xhr.addEventListener("error", function() {
+                    console.error("Network error");
+                    showToast("Network error during upload. Please check your connection.", "error");
+                    resetFormState();
+                });
+                
+                xhr.open("POST", form.action);
+                xhr.setRequestHeader("X-Requested-With", "XMLHttpRequest");
+                xhr.send(formData);
+                
+            } catch (error) {
+                console.error("Form submission error:", error);
+                showToast("An error occurred while submitting the form.", "error");
+                resetFormState();
+            }
+            
+            function resetFormState() {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalBtnText;
+                progressBar.style.display = "none";
+                progressText.style.display = "none";
+                window.updateSteps(0); // Reset step indicator
+            }
+        }
+    </script>
+{% endblock %}
+

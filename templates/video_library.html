@@ -1,0 +1,1623 @@
+{% extends "base.html" %}
+
+{% block head %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='video-library.css') }}">
+{% endblock %}
+
+{% block content %}
+    <div class="video-library-container">
+        <div class="library-header">
+            <h1 class="library-title">Video Library</h1>
+            <div class="feature-status {{ 'enabled' if config.FEATURES.transcription else 'disabled' }}">
+                <i class="fas {{ 'fa-check-circle' if config.FEATURES.transcription else 'fa-times-circle' }}"></i>
+                Transcription {{ 'Enabled' if config.FEATURES.transcription else 'Disabled' }}
+            </div>
+        </div>
+        
+        {% if not config.FEATURES.transcription %}
+        <div class="feature-alert">
+            <h4><i class="fas fa-exclamation-triangle"></i> Transcription Disabled</h4>
+            <p>Video transcription requires additional dependencies. Some features may be limited.</p>
+            <button class="btn btn-sm btn-primary" onclick="showInstallInstructions()">
+                <i class="fas fa-download"></i> Show Installation Instructions
+            </button>
+        </div>
+        {% endif %}
+        
+        <div class="library-controls">
+            <div class="search-container">
+                <input type="text" id="video-search" placeholder="Search videos..." aria-label="Search videos">
+                <button id="search-btn" aria-label="Search">
+                    <i class="fas fa-search"></i>
+                </button>
+            </div>
+            
+            <div class="filter-container">
+                <label for="language-filter">Filter by language:</label>
+                <select id="language-filter" aria-label="Filter by language">
+                    <option value="all">All Languages</option>
+                    <option value="en">English</option>
+                    <option value="es">Spanish</option>
+                    <option value="fr">French</option>
+                    <option value="de">German</option>
+                    <option value="zh-cn">Chinese</option>
+                    <!-- More languages will be populated dynamically -->
+                </select>
+            </div>
+            
+            <button id="analyze-all-btn" class="action-btn">
+                <i class="fas fa-brain"></i>
+                <span>Analyze All</span>
+            </button>
+        </div>
+        
+        <div class="videos-container" id="videos-container">
+            <div class="loading-indicator" id="loading-indicator">
+                <i class="fas fa-spinner fa-spin"></i>
+                <span>Loading videos...</span>
+            </div>
+            <div id="videos-grid" class="video-grid">
+                <!-- Videos will be populated here by JavaScript -->
+            </div>
+            <div id="empty-state" class="empty-state" style="display: none;">
+                <i class="fas fa-film"></i>
+                <h3>No Videos Found</h3>
+                <p>Upload your first video to get started with transcription and analysis.</p>
+                <button class="btn btn-primary" onclick="document.getElementById('upload-modal').style.display='block'">
+                    <i class="fas fa-upload"></i> Upload Video
+                </button>
+            </div>
+        </div>
+        
+        <!-- Video Details Modal -->
+        <div id="video-modal" class="modal" aria-hidden="true">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 id="modal-title">Video Title</h2>
+                    <button class="close-modal" aria-label="Close">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="video-details">
+                        <div class="detail-item">
+                            <span class="detail-label">Date:</span>
+                            <span id="video-date" class="detail-value">June 1, 2023</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Language:</span>
+                            <span id="video-language" class="detail-value">English</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Word Count:</span>
+                            <span id="video-word-count" class="detail-value">1,234</span>
+                        </div>
+                    </div>
+                    
+                    <div class="tabs">
+                        <button class="tab-btn active" data-tab="transcript">Transcript</button>
+                        <button class="tab-btn" data-tab="analysis">Analysis</button>
+                        <button class="tab-btn" data-tab="qa">Q&A</button>
+                    </div>
+                    
+                    <div class="tab-content">
+                        <div id="transcript-tab" class="tab-pane active">
+                            <div class="transcript-content" id="transcript-content">
+                                <!-- Transcript will be loaded here -->
+                            </div>
+                        </div>
+                        
+                        <div id="analysis-tab" class="tab-pane">
+                            <div class="analysis-content">
+                                <div class="analysis-section">
+                                    <h3>Key Points</h3>
+                                    <ul id="key-points-list">
+                                        <!-- Key points will be loaded here -->
+                                    </ul>
+                                </div>
+                                
+                                <div class="analysis-section">
+                                    <h3>Action Items</h3>
+                                    <ul id="action-items-list">
+                                        <!-- Action items will be loaded here -->
+                                    </ul>
+                                </div>
+                                
+                                <div class="analysis-section">
+                                    <h3>Topics</h3>
+                                    <div class="topics-cloud" id="topics-cloud">
+                                        <!-- Topics will be loaded here -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div id="qa-tab" class="tab-pane">
+                            <div class="qa-container">
+                                <div class="qa-form">
+                                    <textarea id="question-input" placeholder="Ask a question about this video..." rows="3" aria-label="Ask a question"></textarea>
+                                    <button id="ask-btn" class="send-btn primary-action">
+                                        <span class="btn-text">Ask</span>
+                                        <i class="fas fa-paper-plane"></i>
+                                    </button>
+                                </div>
+                                
+                                <div class="suggestions-container">
+                                    <h3>Suggested Questions</h3>
+                                    <div class="suggestions-list" id="suggestions-list">
+                                        <!-- Suggestions will be loaded here -->
+                                    </div>
+                                </div>
+                                
+                                <div class="qa-history" id="qa-history">
+                                    <!-- Q&A history will be shown here -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+<!-- Upload Modal -->
+<div id="upload-modal" class="modal" style="display: none;">
+    <div class="modal-content" style="max-width: 600px;">
+        <div class="modal-header">
+            <h3>Upload Video</h3>
+            <button class="close-modal" onclick="document.getElementById('upload-modal').style.display='none'">&times;</button>
+        </div>
+        <div class="modal-body">
+            <form id="upload-form" class="upload-area" enctype="multipart/form-data">
+                <input type="file" id="video-file" name="file" accept="video/*" style="display: none;">
+                <div class="upload-icon">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                </div>
+                <div class="upload-text">Click to select a video file</div>
+                <div class="upload-hint">or drag and drop your file here</div>
+                <div id="file-info" style="margin-top: 1rem; display: none;">
+                    <div><strong>Selected file:</strong> <span id="file-name"></span></div>
+                    <div><strong>Size:</strong> <span id="file-size"></span></div>
+                </div>
+                <button type="submit" class="btn btn-primary" style="margin-top: 1.5rem;" disabled>
+                    <i class="fas fa-upload"></i> Upload Video
+                </button>
+            </form>
+            <div id="upload-progress" style="display: none; margin-top: 1rem;">
+                <div class="progress">
+                    <div class="progress-bar" id="progress-bar" style="width: 0%;"></div>
+                </div>
+                <div class="text-center" id="progress-text">Preparing upload...</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block scripts %}
+{{ super() }}
+<script>
+// Feature detection and setup
+const features = JSON.parse('{{ config.FEATURES|tojson|safe }}');
+const API_BASE = '/api/videos';
+
+// DOM Elements
+const videosContainer = document.getElementById('videos-container');
+const videosGrid = document.getElementById('videos-grid');
+const loadingIndicator = document.getElementById('loading-indicator');
+const emptyState = document.getElementById('empty-state');
+const uploadForm = document.getElementById('upload-form');
+const fileInput = document.getElementById('video-file');
+const fileInfo = document.getElementById('file-info');
+const fileName = document.getElementById('file-name');
+const fileSize = document.getElementById('file-size');
+const uploadBtn = uploadForm.querySelector('button[type="submit"]');
+const uploadProgress = document.getElementById('upload-progress');
+const progressBar = document.getElementById('progress-bar');
+const progressText = document.getElementById('progress-text');
+
+// Initialize the page
+window.addEventListener('DOMContentLoaded', () => {
+    loadVideos();
+    setupEventListeners();
+});
+
+function setupEventListeners() {
+    // File selection
+    uploadForm.addEventListener('click', (e) => {
+        if (e.target === uploadForm || e.target.classList.contains('upload-icon') || 
+            e.target.classList.contains('upload-text') || e.target.classList.contains('upload-hint')) {
+            fileInput.click();
+        }
+    });
+
+    // File input change
+    fileInput.addEventListener('change', handleFileSelect);
+    
+    // Drag and drop
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        uploadForm.addEventListener(eventName, preventDefaults, false);
+    });
+
+    ['dragenter', 'dragover'].forEach(eventName => {
+        uploadForm.addEventListener(eventName, highlight, false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+        uploadForm.addEventListener(eventName, unhighlight, false);
+    });
+
+    uploadForm.addEventListener('drop', handleDrop, false);
+    
+    // Form submission
+    uploadForm.addEventListener('submit', handleUpload);
+}
+
+function preventDefaults(e) {
+    e.preventDefault();
+    e.stopPropagation();
+}
+
+function highlight() {
+    uploadForm.classList.add('dragover');
+}
+
+function unhighlight() {
+    uploadForm.classList.remove('dragover');
+}
+
+function handleDrop(e) {
+    const dt = e.dataTransfer;
+    const files = dt.files;
+    if (files.length) {
+        fileInput.files = files;
+        handleFileSelect({ target: fileInput });
+    }
+}
+
+function handleFileSelect(e) {
+    const file = e.target.files[0];
+    if (file) {
+        fileName.textContent = file.name;
+        fileSize.textContent = formatFileSize(file.size);
+        fileInfo.style.display = 'block';
+        uploadBtn.disabled = false;
+    } else {
+        fileInfo.style.display = 'none';
+        uploadBtn.disabled = true;
+    }
+}
+
+async function handleUpload(e) {
+    e.preventDefault();
+    
+    const file = fileInput.files[0];
+    if (!file) return;
+    
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    // Show progress
+    uploadProgress.style.display = 'block';
+    uploadBtn.disabled = true;
+    
+    try {
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', API_BASE + '/upload', true);
+        
+        // Upload progress
+        xhr.upload.onprogress = (e) => {
+            if (e.lengthComputable) {
+                const percentComplete = Math.round((e.loaded / e.total) * 100);
+                updateProgress(percentComplete, 'Uploading...');
+            }
+        };
+        
+        xhr.onload = () => {
+            if (xhr.status === 201) {
+                updateProgress(100, 'Processing video...');
+                const response = JSON.parse(xhr.responseText);
+                // Reload videos after a short delay
+                setTimeout(() => {
+                    loadVideos();
+                    document.getElementById('upload-modal').style.display = 'none';
+                    resetUploadForm();
+                }, 1500);
+            } else {
+                showError('Upload failed: ' + (xhr.responseText || 'Unknown error'));
+                resetUploadForm();
+            }
+        };
+        
+        xhr.onerror = () => {
+            showError('Upload failed. Please check your connection and try again.');
+            resetUploadForm();
+        };
+        
+        xhr.send(formData);
+        
+    } catch (error) {
+        console.error('Upload error:', error);
+        showError('An error occurred during upload. Please try again.');
+        resetUploadForm();
+    }
+}
+
+function updateProgress(percent, message) {
+    progressBar.style.width = percent + '%';
+    progressText.textContent = message + ' ' + percent + '%';
+}
+
+function resetUploadForm() {
+    uploadForm.reset();
+    fileInfo.style.display = 'none';
+    uploadBtn.disabled = true;
+    uploadProgress.style.display = 'none';
+    progressBar.style.width = '0%';
+}
+
+function showError(message) {
+    // You might want to implement a more sophisticated error display
+    alert(message);
+}
+
+function formatFileSize(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+function showInstallInstructions() {
+    alert('To enable video transcription, please install the required dependencies:\n\n' +
+          '1. Install Python 3.8 or higher\n' +
+          '2. Install PyTorch: pip install torch torchaudio\n' +
+          '3. Install Whisper: pip install openai-whisper\n' +
+          '4. Install other dependencies: pip install -r requirements.txt');
+}
+
+async function loadVideos() {
+    try {
+        loadingIndicator.style.display = 'flex';
+        emptyState.style.display = 'none';
+        videosGrid.innerHTML = '';
+        
+        const response = await fetch(API_BASE);
+        if (!response.ok) throw new Error('Failed to load videos');
+        
+        const videos = await response.json();
+        
+        if (videos.length === 0) {
+            showEmptyState();
+            return;
+        }
+        
+        videos.forEach(video => {
+            const videoCard = createVideoCard(video);
+            videosGrid.appendChild(videoCard);
+        });
+        
+    } catch (error) {
+        console.error('Error loading videos:', error);
+        showError('Failed to load videos. Please try again later.');
+    } finally {
+        loadingIndicator.style.display = 'none';
+    }
+}
+
+function createVideoCard(video) {
+    const card = document.createElement('div');
+    card.className = 'video-card';
+    
+    const thumbnailUrl = video.thumbnail || 'https://via.placeholder.com/320x180?text=No+Thumbnail';
+    const uploadDate = video.upload_date ? new Date(video.upload_date).toLocaleDateString() : 'Unknown date';
+    const duration = video.duration ? formatDuration(video.duration) : '--:--';
+    
+    card.innerHTML = `
+        <div class="video-thumbnail">
+            <img src="${thumbnailUrl}" alt="${video.title || 'Video thumbnail'}" onerror="this.src='https://via.placeholder.com/320x180?text=Thumbnail+Not+Available'">
+            <div class="video-duration">${duration}</div>
+        </div>
+        <div class="video-info">
+            <h3 class="video-title" title="${video.title || 'Untitled Video'}">${video.title || 'Untitled Video'}</h3>
+            <div class="video-meta">
+                <span class="video-date">${uploadDate}</span>
+                <span class="video-status ${video.processed ? 'processed' : 'pending'}">
+                    ${video.processed ? 'Processed' : 'Processing...'}
+                </span>
+            </div>
+            <div class="video-actions">
+                <button class="btn btn-outline btn-sm" onclick="viewVideo('${video.id}')">
+                    <i class="fas fa-eye"></i> View
+                </button>
+                <button class="btn btn-outline btn-sm" onclick="downloadVideo('${video.id}')">
+                    <i class="fas fa-download"></i> Download
+                </button>
+                <button class="btn btn-outline btn-sm" onclick="deleteVideo('${video.id}')">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        </div>
+    `;
+    
+    return card;
+}
+
+function showEmptyState() {
+    loadingIndicator.style.display = 'none';
+    emptyState.style.display = 'block';
+}
+
+function formatDuration(seconds) {
+    if (!seconds && seconds !== 0) return '--:--';
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+}
+
+// Placeholder functions for video actions
+function viewVideo(videoId) {
+    window.location.href = `/video/${videoId}`;
+}
+
+function downloadVideo(videoId) {
+    // Implement download functionality
+    alert('Download functionality will be implemented here');
+}
+
+function deleteVideo(videoId) {
+    if (confirm('Are you sure you want to delete this video?')) {
+        // Implement delete functionality
+        alert('Delete functionality will be implemented here');
+    }
+}
+
+// Expose functions to global scope for HTML event handlers
+window.showInstallInstructions = showInstallInstructions;
+window.viewVideo = viewVideo;
+window.downloadVideo = downloadVideo;
+window.deleteVideo = deleteVideo;
+
+// Video Library Script
+const videoModal = document.getElementById('video-modal');
+const modalTitle = document.getElementById('modal-title');
+const videoDate = document.getElementById('video-date');
+const videoLanguage = document.getElementById('video-language');
+const videoWordCount = document.getElementById('video-word-count');
+const transcriptContent = document.getElementById('transcript-content');
+const keyPointsList = document.getElementById('key-points-list');
+const actionItemsList = document.getElementById('action-items-list');
+const topicsCloud = document.getElementById('topics-cloud');
+const questionInput = document.getElementById('question-input');
+const askBtn = document.getElementById('ask-btn');
+const suggestionsList = document.getElementById('suggestions-list');
+const qaHistory = document.getElementById('qa-history');
+const searchInput = document.getElementById('video-search');
+const searchBtn = document.getElementById('search-btn');
+const languageFilter = document.getElementById('language-filter');
+const analyzeAllBtn = document.getElementById('analyze-all-btn');
+
+// Current video ID
+let currentVideoId = null;
+
+// All videos data
+let allVideos = [];
+
+// Load videos
+loadVideos();
+
+// Event listeners
+document.querySelector('.close-modal').addEventListener('click', closeModal);
+
+// Tab switching
+document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        // Remove active class from all tabs
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+
+        // Add active class to clicked tab
+        this.classList.add('active');
+        const tabId = this.getAttribute('data-tab');
+        document.getElementById(`${tabId}-tab`).classList.add('active');
+    });
+});
+
+// Ask button
+askBtn.addEventListener('click', askQuestion);
+
+// Search
+searchBtn.addEventListener('click', function() {
+    filterVideos();
+});
+
+searchInput.addEventListener('keyup', function(e) {
+    if (e.key === 'Enter') {
+        filterVideos();
+    }
+});
+
+// Language filter
+languageFilter.addEventListener('change', filterVideos);
+
+// Analyze all button
+analyzeAllBtn.addEventListener('click', analyzeAllVideos);
+
+// Functions
+function loadVideos() {
+    fetch('/api/videos')
+        .then(response => response.json())
+        .then(data => {
+            allVideos = data.videos;
+            displayVideos(allVideos);
+            populateLanguageFilter(allVideos);
+        })
+        .catch(error => {
+            console.error('Error loading videos:', error);
+            videosContainer.innerHTML = `
+                <div class="error-message">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <p>Error loading videos. Please try again later.</p>
+                </div>
+            `;
+        });
+}
+
+function displayVideos(videos) {
+    if (videos.length === 0) {
+        videosContainer.innerHTML = `
+            <div class="no-videos-message">
+                <i class="fas fa-video-slash"></i>
+                <p>No videos found. Upload a video or place one in the video_inputs folder.</p>
+            </div>
+        `;
+        return;
+    }
+
+    let html = '';
+    videos.forEach(video => {
+        const date = new Date(video.date).toLocaleDateString();
+        html += `
+            <div class="video-card" data-id="${video.id}">
+                <div class="video-icon">
+                    <i class="fas fa-file-video"></i>
+                </div>
+                <div class="video-info">
+                    <h3 class="video-title">${video.title}</h3>
+                    <div class="video-meta">
+                        <span class="video-date">${date}</span>
+                        <span class="video-language">${video.language_name}</span>
+                    </div>
+                </div>
+                <div class="video-actions">
+                    <button class="view-btn" aria-label="View details">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+    });
+
+    videosContainer.innerHTML = html;
+
+    // Add event listeners to video cards
+    document.querySelectorAll('.video-card').forEach(card => {
+        card.addEventListener('click', function() {
+            const videoId = this.getAttribute('data-id');
+            openVideoDetails(videoId);
+        });
+    });
+}
+
+function populateLanguageFilter(videos) {
+    // Get unique languages
+    const languages = {};
+    videos.forEach(video => {
+        if (video.language && video.language_name) {
+            languages[video.language] = video.language_name;
+        }
+    });
+
+    // Clear existing options except "All Languages"
+    while (languageFilter.options.length > 1) {
+        languageFilter.remove(1);
+    }
+
+    // Add language options
+    Object.entries(languages).forEach(([code, name]) => {
+        const option = document.createElement('option');
+        option.value = code;
+        option.textContent = name;
+        languageFilter.appendChild(option);
+    });
+}
+
+function filterVideos() {
+    const searchTerm = searchInput.value.toLowerCase();
+    const languageCode = languageFilter.value;
+
+    const filteredVideos = allVideos.filter(video => {
+        const matchesSearch = video.title.toLowerCase().includes(searchTerm);
+        const matchesLanguage = languageCode === 'all' || video.language === languageCode;
+        return matchesSearch && matchesLanguage;
+    });
+
+    displayVideos(filteredVideos);
+}
+
+function openVideoDetails(videoId) {
+    currentVideoId = videoId;
+
+    // Reset tabs
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+    document.querySelector('.tab-btn[data-tab="transcript"]').classList.add('active');
+    document.getElementById('transcript-tab').classList.add('active');
+
+    // Show loading state
+    modalTitle.textContent = 'Loading...';
+    videoDate.textContent = '';
+    videoLanguage.textContent = '';
+    videoWordCount.textContent = '';
+    transcriptContent.innerHTML = '<div class="loading"><i class="fas fa-spinner fa-spin"></i> Loading transcript...</div>';
+    keyPointsList.innerHTML = '<div class="loading"><i class="fas fa-spinner fa-spin"></i> Loading analysis...</div>';
+    actionItemsList.innerHTML = '';
+    topicsCloud.innerHTML = '';
+    suggestionsList.innerHTML = '<div class="loading"><i class="fas fa-spinner fa-spin"></i> Loading suggestions...</div>';
+    qaHistory.innerHTML = '';
+
+    // Show modal
+    videoModal.setAttribute('aria-hidden', 'false');
+    videoModal.style.display = 'flex';
+
+    // Load video details
+    fetch(`/api/videos/${videoId}`)
+        .then(response => response.json())
+        .then(data => {
+            // Update modal content
+            modalTitle.textContent = data.title;
+            videoDate.textContent = new Date(data.date).toLocaleDateString();
+            videoLanguage.textContent = data.language_name;
+            videoWordCount.textContent = data.transcript.split(/\s+/).length.toLocaleString();
+
+            // Update transcript
+            transcriptContent.innerHTML = `<pre>${data.transcript}</pre>`;
+
+            // Update analysis if available
+            if (data.analysis) {
+                updateAnalysis(data.analysis);
+            } else {
+                keyPointsList.innerHTML = '<p>No analysis available. Click "Analyze All" to generate analysis.</p>';
+                actionItemsList.innerHTML = '';
+                topicsCloud.innerHTML = '';
+            }
+
+            // Load suggestions
+            loadSuggestions(videoId);
+        })
+        .catch(error => {
+            console.error('Error loading video details:', error);
+            transcriptContent.innerHTML = `
+                <div class="error-message">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <p>Error loading video details. Please try again later.</p>
+                </div>
+            `;
+        });
+}
+
+function updateAnalysis(analysis) {
+    // Update key points
+    if (analysis.key_points && analysis.key_points.length > 0) {
+        keyPointsList.innerHTML = analysis.key_points.map(point => `<li>${point}</li>`).join('');
+    } else {
+        keyPointsList.innerHTML = '<li>No key points identified.</li>';
+    }
+
+    // Update action items
+    if (analysis.action_items && analysis.action_items.length > 0) {
+        actionItemsList.innerHTML = analysis.action_items.map(item => `<li>${item}</li>`).join('');
+    } else {
+        actionItemsList.innerHTML = '<li>No action items identified.</li>';
+    }
+
+    // Update topics
+    if (analysis.topics && analysis.topics.length > 0) {
+        topicsCloud.innerHTML = analysis.topics.map(topic => 
+            `<span class="topic-tag">${topic}</span>`
+        ).join('');
+    } else {
+        topicsCloud.innerHTML = '<p>No topics identified.</p>';
+    }
+}
+
+function loadSuggestions(videoId) {
+    fetch(`/api/videos/${videoId}/suggestions`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.suggestions && data.suggestions.length > 0) {
+                suggestionsList.innerHTML = data.suggestions.map(suggestion => 
+                    `<button class="suggestion-btn">${suggestion}</button>`
+                ).join('');
+
+                // Add event listeners to suggestion buttons
+                document.querySelectorAll('.suggestion-btn').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        questionInput.value = this.textContent;
+                        questionInput.focus();
+                    });
+                });
+            } else {
+                suggestionsList.innerHTML = '<p>No suggestions available.</p>';
+            }
+        })
+        .catch(error => {
+            console.error('Error loading suggestions:', error);
+            suggestionsList.innerHTML = '<p>Error loading suggestions.</p>';
+        });
+}
+
+function askQuestion() {
+    const question = questionInput.value.trim();
+    if (!question) return;
+
+    // Add question to history
+    const questionElement = document.createElement('div');
+    questionElement.className = 'qa-item question';
+    questionElement.innerHTML = `
+        <div class="qa-icon">
+            <i class="fas fa-user"></i>
+        </div>
+        <div class="qa-content">
+            <p>${question}</p>
+        </div>
+    `;
+    qaHistory.appendChild(questionElement);
+
+    // Add loading answer
+    const answerElement = document.createElement('div');
+    answerElement.className = 'qa-item answer';
+    answerElement.innerHTML = `
+        <div class="qa-icon">
+            <i class="fas fa-robot"></i>
+        </div>
+        <div class="qa-content">
+            <div class="loading"><i class="fas fa-spinner fa-spin"></i> Thinking...</div>
+        </div>
+    `;
+    qaHistory.appendChild(answerElement);
+
+    // Scroll to bottom
+    qaHistory.scrollTop = qaHistory.scrollHeight;
+
+    // Clear input
+    questionInput.value = '';
+
+    // Send question to API
+    fetch('/api/ask', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            question: question,
+            transcript_id: currentVideoId
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        // Update answer
+        const answerContent = answerElement.querySelector('.qa-content');
+        if (data.error) {
+            answerContent.innerHTML = `<p class="error">${data.error}</p>`;
+        } else {
+            answerContent.innerHTML = `<p>${data.answer}</p>`;
+
+            // Add sources if available
+            if (data.sources && data.sources.length > 0) {
+                const sourcesHtml = data.sources.map(source => 
+                    `<li>${source.title} (${Math.round(source.relevance * 100)}% relevant)</li>`
+                ).join('');
+                answerContent.innerHTML += `
+                    <div class="answer-sources">
+                        <h4>Sources:</h4>
+                        <ul>${sourcesHtml}</ul>
+                    </div>
+                `;
+            }
+
+            // Update suggestions
+            if (data.suggestions && data.suggestions.length > 0) {
+                suggestionsList.innerHTML = data.suggestions.map(suggestion => 
+                    `<button class="suggestion-btn">${suggestion}</button>`
+                ).join('');
+
+                // Add event listeners to suggestion buttons
+                document.querySelectorAll('.suggestion-btn').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        questionInput.value = this.textContent;
+                        questionInput.focus();
+                    });
+                });
+            }
+        }
+
+        // Scroll to bottom
+        qaHistory.scrollTop = qaHistory.scrollHeight;
+    })
+    .catch(error => {
+        console.error('Error asking question:', error);
+        const answerContent = answerElement.querySelector('.qa-content');
+        answerContent.innerHTML = `
+            <p class="error">Error processing your question. Please try again later.</p>
+        `;
+
+        // Scroll to bottom
+        qaHistory.scrollTop = qaHistory.scrollHeight;
+    });
+}
+
+function analyzeAllVideos() {
+    // Show loading state
+    analyzeAllBtn.disabled = true;
+    analyzeAllBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Analyzing...';
+
+    // Send request to analyze all videos
+    fetch('/api/videos/analyze', {
+        method: 'POST'
+    })
+    .then(response => response.json())
+    .then(data => {
+        // Show success message
+        showToast(data.message, 'success');
+
+        // Reset button
+        analyzeAllBtn.disabled = false;
+        analyzeAllBtn.innerHTML = '<i class="fas fa-brain"></i> Analyze All';
+
+        // Reload videos
+        loadVideos();
+                        document.querySelectorAll('.suggestion-btn').forEach(btn => {
+                            btn.addEventListener('click', function() {
+                                questionInput.value = this.textContent;
+                                questionInput.focus();
+                            });
+                        });
+                    } else {
+                        suggestionsList.innerHTML = '<p>No suggestions available.</p>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading suggestions:', error);
+                    suggestionsList.innerHTML = '<p>Error loading suggestions.</p>';
+                });
+        }
+        
+        function askQuestion() {
+            const question = questionInput.value.trim();
+            if (!question) return;
+            
+            // Add question to history
+            const questionElement = document.createElement('div');
+            questionElement.className = 'qa-item question';
+            questionElement.innerHTML = `
+                <div class="qa-icon">
+                    <i class="fas fa-user"></i>
+                </div>
+                <div class="qa-content">
+                    <p>${question}</p>
+                </div>
+            `;
+            qaHistory.appendChild(questionElement);
+            
+            // Add loading answer
+            const answerElement = document.createElement('div');
+            answerElement.className = 'qa-item answer';
+            answerElement.innerHTML = `
+                <div class="qa-icon">
+                    <i class="fas fa-robot"></i>
+                </div>
+                <div class="qa-content">
+                    <div class="loading"><i class="fas fa-spinner fa-spin"></i> Thinking...</div>
+                </div>
+            `;
+            qaHistory.appendChild(answerElement);
+            
+            // Scroll to bottom
+            qaHistory.scrollTop = qaHistory.scrollHeight;
+            
+            // Clear input
+            questionInput.value = '';
+            
+            // Send question to API
+            fetch('/api/ask', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    question: question,
+                    transcript_id: currentVideoId
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Update answer
+                const answerContent = answerElement.querySelector('.qa-content');
+                if (data.error) {
+                    answerContent.innerHTML = `<p class="error">${data.error}</p>`;
+                } else {
+                    answerContent.innerHTML = `<p>${data.answer}</p>`;
+                    
+                    // Add sources if available
+                    if (data.sources && data.sources.length > 0) {
+                        const sourcesHtml = data.sources.map(source => 
+                            `<li>${source.title} (${Math.round(source.relevance * 100)}% relevant)</li>`
+                        ).join('');
+                        answerContent.innerHTML += `
+                            <div class="answer-sources">
+                                <h4>Sources:</h4>
+                                <ul>${sourcesHtml}</ul>
+                            </div>
+                        `;
+                    }
+                    
+                    // Update suggestions
+                    if (data.suggestions && data.suggestions.length > 0) {
+                        suggestionsList.innerHTML = data.suggestions.map(suggestion => 
+                            `<button class="suggestion-btn">${suggestion}</button>`
+                        ).join('');
+                        
+                        // Add event listeners to suggestion buttons
+                        document.querySelectorAll('.suggestion-btn').forEach(btn => {
+                            btn.addEventListener('click', function() {
+                                questionInput.value = this.textContent;
+                                questionInput.focus();
+                            });
+                        });
+                    }
+                }
+                
+                // Scroll to bottom
+                qaHistory.scrollTop = qaHistory.scrollHeight;
+            })
+            .catch(error => {
+                console.error('Error asking question:', error);
+                const answerContent = answerElement.querySelector('.qa-content');
+                answerContent.innerHTML = `
+                    <p class="error">Error processing your question. Please try again later.</p>
+                `;
+                
+                // Scroll to bottom
+                qaHistory.scrollTop = qaHistory.scrollHeight;
+            });
+        }
+        
+        function analyzeAllVideos() {
+            // Show loading state
+            analyzeAllBtn.disabled = true;
+            analyzeAllBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Analyzing...';
+            
+            // Send request to analyze all videos
+            fetch('/api/videos/analyze', {
+                method: 'POST'
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Show success message
+                showToast(data.message, 'success');
+                
+                // Reset button
+                analyzeAllBtn.disabled = false;
+                analyzeAllBtn.innerHTML = '<i class="fas fa-brain"></i> Analyze All';
+                
+                // Reload videos
+                loadVideos();
+                
+                // If a video is currently open, reload its details
+                if (currentVideoId) {
+                    openVideoDetails(currentVideoId);
+                }
+            })
+            .catch(error => {
+                console.error('Error analyzing videos:', error);
+                showToast('Error analyzing videos. Please try again later.', 'error');
+                
+                // Reset button
+                analyzeAllBtn.disabled = false;
+                analyzeAllBtn.innerHTML = '<i class="fas fa-brain"></i> Analyze All';
+            });
+        }
+        
+        function closeModal() {
+            videoModal.setAttribute('aria-hidden', 'true');
+            videoModal.style.display = 'none';
+            currentVideoId = null;
+        }
+        
+        // Close modal when clicking outside
+        window.addEventListener('click', function(event) {
+            if (event.target === videoModal) {
+                closeModal();
+            }
+        });
+        
+        // Close modal with Escape key
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape' && videoModal.style.display === 'flex') {
+                closeModal();
+            }
+        });
+    });
+</script>
+
+<style>
+    /* Video Library Styles */
+    .video-library-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+    
+    .library-title {
+        font-size: 2.5rem;
+        margin-bottom: 30px;
+        color: var(--primary-color);
+        text-align: center;
+    }
+    
+    .library-controls {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+        gap: 15px;
+    }
+    
+    .search-container {
+        display: flex;
+        flex: 1;
+        max-width: 400px;
+    }
+    
+    .search-container input {
+        flex: 1;
+        padding: 10px 15px;
+        border: 1px solid #ddd;
+        border-radius: 4px 0 0 4px;
+        font-size: 16px;
+    }
+    
+    .search-container button {
+        padding: 10px 15px;
+        background: var(--primary-color);
+        color: white;
+        border: none;
+        border-radius: 0 4px 4px 0;
+        cursor: pointer;
+    }
+    
+    .filter-container {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    
+    .filter-container select {
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 16px;
+    }
+    
+    .action-btn {
+        padding: 10px 15px;
+        background: var(--accent-color);
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 16px;
+        transition: background 0.2s;
+    }
+    
+    .action-btn:hover {
+        background: var(--accent-hover);
+    }
+    
+    .videos-container {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 20px;
+        margin-top: 30px;
+    }
+    
+    .video-card {
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        cursor: pointer;
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    
+    .video-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.15);
+    }
+    
+    .video-icon {
+        font-size: 2rem;
+        color: var(--primary-color);
+        margin-bottom: 15px;
+        text-align: center;
+    }
+    
+    .video-info {
+        flex: 1;
+    }
+    
+    .video-title {
+        font-size: 1.2rem;
+        margin: 0 0 10px;
+        color: var(--text-color);
+    }
+    
+    .video-meta {
+        display: flex;
+        justify-content: space-between;
+        color: #666;
+        font-size: 0.9rem;
+    }
+    
+    .video-actions {
+        margin-top: 15px;
+        text-align: right;
+    }
+    
+    .view-btn {
+        background: none;
+        border: none;
+        color: var(--primary-color);
+        cursor: pointer;
+        font-size: 1.2rem;
+    }
+    
+    .loading-indicator {
+        grid-column: 1 / -1;
+        text-align: center;
+        padding: 30px;
+        color: #666;
+    }
+    
+    .loading-indicator i {
+        font-size: 2rem;
+        margin-bottom: 10px;
+        color: var(--primary-color);
+    }
+    
+    .no-videos-message {
+        grid-column: 1 / -1;
+        text-align: center;
+        padding: 50px 20px;
+        background: #f9f9f9;
+        border-radius: 8px;
+        color: #666;
+    }
+    
+    .no-videos-message i {
+        font-size: 3rem;
+        margin-bottom: 15px;
+        color: #999;
+    }
+    
+    .error-message {
+        grid-column: 1 / -1;
+        text-align: center;
+        padding: 30px;
+        background: #fff1f0;
+        border-radius: 8px;
+        color: #cf1322;
+    }
+    
+    .error-message i {
+        font-size: 2rem;
+        margin-bottom: 10px;
+    }
+    
+    /* Modal Styles */
+    .modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 1000;
+        justify-content: center;
+        align-items: center;
+        padding: 20px;
+    }
+    
+    .modal-content {
+        background: white;
+        border-radius: 8px;
+        width: 90%;
+        max-width: 1000px;
+        max-height: 90vh;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        animation: modalFadeIn 0.3s;
+    }
+    
+    @keyframes modalFadeIn {
+        from { opacity: 0; transform: translateY(-20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .modal-header {
+        padding: 20px;
+        border-bottom: 1px solid #eee;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .modal-header h2 {
+        margin: 0;
+        font-size: 1.5rem;
+        color: var(--primary-color);
+    }
+    
+    .close-modal {
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        cursor: pointer;
+        color: #999;
+    }
+    
+    .modal-body {
+        padding: 20px;
+        overflow-y: auto;
+        flex: 1;
+    }
+    
+    .video-details {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 20px;
+        margin-bottom: 20px;
+    }
+    
+    .detail-item {
+        flex: 1;
+        min-width: 150px;
+    }
+    
+    .detail-label {
+        font-weight: 600;
+        color: #666;
+        margin-right: 5px;
+    }
+    
+    .detail-value {
+        color: var(--text-color);
+    }
+    
+    /* Tabs */
+    .tabs {
+        display: flex;
+        border-bottom: 1px solid #eee;
+        margin-bottom: 20px;
+    }
+    
+    .tab-btn {
+        padding: 10px 20px;
+        background: none;
+        border: none;
+        border-bottom: 2px solid transparent;
+        cursor: pointer;
+        font-size: 16px;
+        color: #666;
+        transition: all 0.2s;
+    }
+    
+    .tab-btn:hover {
+        color: var(--primary-color);
+    }
+    
+    .tab-btn.active {
+        color: var(--primary-color);
+        border-bottom-color: var(--primary-color);
+    }
+    
+    .tab-pane {
+        display: none;
+    }
+    
+    .tab-pane.active {
+        display: block;
+        animation: fadeIn 0.3s;
+    }
+    
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+    
+    /* Transcript Tab */
+    .transcript-content {
+        max-height: 400px;
+        overflow-y: auto;
+        background: #f9f9f9;
+        padding: 15px;
+        border-radius: 4px;
+    }
+    
+    .transcript-content pre {
+        white-space: pre-wrap;
+        font-family: 'Inter', sans-serif;
+        margin: 0;
+        line-height: 1.6;
+    }
+    
+    /* Analysis Tab */
+    .analysis-content {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 20px;
+    }
+    
+    .analysis-section {
+        background: #f9f9f9;
+        padding: 15px;
+        border-radius: 4px;
+    }
+    
+    .analysis-section h3 {
+        margin-top: 0;
+        color: var(--primary-color);
+        font-size: 1.2rem;
+    }
+    
+    .analysis-section ul {
+        margin: 0;
+        padding-left: 20px;
+    }
+    
+    .analysis-section li {
+        margin-bottom: 10px;
+        line-height: 1.5;
+    }
+    
+    .topics-cloud {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+    
+    .topic-tag {
+        background: var(--primary-light);
+        color: var(--primary-color);
+        padding: 5px 10px;
+        border-radius: 20px;
+        font-size: 0.9rem;
+    }
+    
+    /* Q&A Tab */
+    .qa-container {
+        display: flex;
+        flex-direction: column;
+        height: 500px;
+    }
+    
+    .qa-form {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 20px;
+    }
+    
+    .qa-form textarea {
+        flex: 1;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        resize: none;
+        font-family: 'Inter', sans-serif;
+        font-size: 16px;
+    }
+    
+    .suggestions-container {
+        margin-bottom: 20px;
+    }
+    
+    .suggestions-container h3 {
+        font-size: 1rem;
+        color: #666;
+        margin-bottom: 10px;
+    }
+    
+    .suggestions-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+    
+    .suggestion-btn {
+        background: #f0f0f0;
+        border: none;
+        padding: 8px 12px;
+        border-radius: 20px;
+        cursor: pointer;
+        font-size: 0.9rem;
+        transition: background 0.2s;
+    }
+    
+    .suggestion-btn:hover {
+        background: #e0e0e0;
+    }
+    
+    .qa-history {
+        flex: 1;
+        overflow-y: auto;
+        border: 1px solid #eee;
+        border-radius: 4px;
+        padding: 15px;
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+    }
+    
+    .qa-item {
+        display: flex;
+        gap: 10px;
+    }
+    
+    .qa-icon {
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+    
+    .qa-item.question .qa-icon {
+        background: var(--primary-light);
+        color: var(--primary-color);
+    }
+    
+    .qa-item.answer .qa-icon {
+        background: var(--accent-light);
+        color: var(--accent-color);
+    }
+    
+    .qa-content {
+        background: #f9f9f9;
+        padding: 10px 15px;
+        border-radius: 4px;
+        flex: 1;
+    }
+    
+    .qa-content p {
+        margin: 0;
+        line-height: 1.5;
+    }
+    
+    .qa-content .error {
+        color: #cf1322;
+    }
+    
+    .answer-sources {
+        margin-top: 10px;
+        font-size: 0.9rem;
+        color: #666;
+    }
+    
+    .answer-sources h4 {
+        margin: 0 0 5px;
+        font-size: 0.9rem;
+    }
+    
+    .answer-sources ul {
+        margin: 0;
+        padding-left: 20px;
+    }
+    
+    .loading {
+        color: #666;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    
+    /* Responsive Styles */
+    @media (max-width: 768px) {
+        .library-controls {
+            flex-direction: column;
+            align-items: stretch;
+        }
+        
+        .search-container {
+            max-width: none;
+        }
+        
+        .modal-content {
+            width: 95%;
+            max-height: 95vh;
+        }
+        
+        .analysis-content {
+            grid-template-columns: 1fr;
+        }
+        
+        .qa-form {
+            flex-direction: column;
+        }
+    }
+    
+    /* Dark Mode Support */
+    @media (prefers-color-scheme: dark) {
+        .video-card {
+            background: #222;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+        }
+        
+        .video-title {
+            color: #eee;
+        }
+        
+        .video-meta {
+            color: #aaa;
+        }
+        
+        .modal-content {
+            background: #222;
+        }
+        
+        .modal-header {
+            border-bottom-color: #333;
+        }
+        
+        .tabs {
+            border-bottom-color: #333;
+        }
+        
+        .transcript-content,
+        .analysis-section,
+        .qa-content {
+            background: #333;
+        }
+        
+        .suggestion-btn {
+            background: #333;
+            color: #eee;
+        }
+        
+        .suggestion-btn:hover {
+            background: #444;
+        }
+        
+        .qa-history {
+            border-color: #333;
+        }
+        
+        .qa-form textarea {
+            background: #333;
+            border-color: #444;
+            color: #eee;
+        }
+    }
+</style>
+{% endblock %}
+

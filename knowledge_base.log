@@ -1,0 +1,79 @@
+2025-06-06 12:12:30,436 - VideoMonitor - INFO - VideoProcessor initialized with input_dir=video_inputs, output_dir=video_outputs
+2025-06-06 12:12:30,437 - VideoMonitor - INFO - VideoMonitor initialized with input_dir=video_inputs
+2025-06-06 12:12:30,437 - VideoMonitor - INFO - Checking for existing files in video_inputs
+2025-06-06 12:12:30,438 - KnowledgeBase - INFO - KnowledgeBase initialized with 0 entries
+2025-06-06 12:12:30,440 - VideoMonitor - INFO - Started monitoring directory: video_inputs
+2025-06-06 12:12:30,445 - werkzeug - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://169.254.0.21:5000
+2025-06-06 12:12:30,445 - werkzeug - INFO - [33mPress CTRL+C to quit[0m
+2025-06-06 12:12:30,446 - werkzeug - INFO -  * Restarting with watchdog (inotify)
+2025-06-06 12:12:33,908 - VideoMonitor - INFO - VideoProcessor initialized with input_dir=video_inputs, output_dir=video_outputs
+2025-06-06 12:12:33,908 - VideoMonitor - INFO - VideoMonitor initialized with input_dir=video_inputs
+2025-06-06 12:12:33,908 - VideoMonitor - INFO - Checking for existing files in video_inputs
+2025-06-06 12:12:33,909 - KnowledgeBase - INFO - KnowledgeBase initialized with 0 entries
+2025-06-06 12:12:33,912 - VideoMonitor - INFO - Started monitoring directory: video_inputs
+2025-06-06 12:12:34,020 - werkzeug - WARNING -  * Debugger is active!
+2025-06-06 12:12:34,021 - werkzeug - INFO -  * Debugger PIN: 121-035-461
+2025-06-06 12:13:19,082 - werkzeug - INFO - 10.254.203.1 - - [06/Jun/2025 12:13:19] "[35m[1mGET / HTTP/1.1[0m" 500 -
+2025-06-06 12:13:19,145 - werkzeug - INFO - 10.254.203.1 - - [06/Jun/2025 12:13:19] "[33mGET /favicon.ico HTTP/1.1[0m" 404 -
+2025-06-06 12:13:49,042 - werkzeug - INFO - 10.254.203.1 - - [06/Jun/2025 12:13:49] "[35m[1mGET / HTTP/1.1[0m" 500 -
+2025-06-06 12:16:47,331 - werkzeug - INFO - 10.254.203.1 - - [06/Jun/2025 12:16:47] "[35m[1mHEAD / HTTP/1.1[0m" 500 -
+2025-06-06 12:16:47,342 - werkzeug - INFO - 10.254.203.1 - - [06/Jun/2025 12:16:47] "[35m[1mGET / HTTP/1.1[0m" 500 -
+2025-06-06 12:26:18,843 - werkzeug - INFO - 10.254.203.1 - - [06/Jun/2025 12:26:18] "[35m[1mGET / HTTP/1.1[0m" 500 -
+2025-06-06 12:26:20,005 - werkzeug - INFO - 10.254.203.1 - - [06/Jun/2025 12:26:20] "[33mGET /favicon.ico HTTP/1.1[0m" 404 -
+2025-06-06 12:26:27,620 - werkzeug - INFO - 10.254.203.1 - - [06/Jun/2025 12:26:27] "[35m[1mGET / HTTP/1.1[0m" 500 -
+2025-06-06 12:31:05,301 - werkzeug - INFO -  * Detected change in '/home/ubuntu/VideoTranscriber/final_package/app.py', reloading
+2025-06-06 12:31:05,302 - werkzeug - INFO -  * Detected change in '/home/ubuntu/VideoTranscriber/final_package/app.py', reloading
+2025-06-06 12:31:05,302 - werkzeug - INFO -  * Detected change in '/home/ubuntu/VideoTranscriber/final_package/app.py', reloading
+2025-06-06 12:31:06,393 - werkzeug - INFO -  * Restarting with watchdog (inotify)
+2025-06-07 02:48:33,939 - VideoMonitor - INFO - VideoProcessor initialized with input_dir=video_inputs, output_dir=video_outputs
+2025-06-07 02:48:33,940 - VideoMonitor - INFO - VideoMonitor initialized with input_dir=video_inputs
+2025-06-07 02:48:33,940 - VideoMonitor - INFO - Checking for existing files in video_inputs
+2025-06-07 02:48:33,941 - VideoMonitor - INFO - Started monitoring directory: video_inputs
+2025-06-07 02:48:33,942 - werkzeug - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://169.254.0.21:5000
+2025-06-07 02:48:33,942 - werkzeug - INFO - [33mPress CTRL+C to quit[0m
+2025-06-07 02:49:12,926 - werkzeug - INFO - 10.2.141.1 - - [07/Jun/2025 02:49:12] "GET / HTTP/1.1" 200 -
+2025-06-07 02:49:12,975 - werkzeug - INFO - 10.2.141.1 - - [07/Jun/2025 02:49:12] "GET /static/style.css HTTP/1.1" 200 -
+2025-06-07 02:49:48,288 - werkzeug - INFO - 10.2.141.1 - - [07/Jun/2025 02:49:48] "GET /videos HTTP/1.1" 200 -
+2025-06-07 02:49:48,310 - werkzeug - INFO - 10.2.141.1 - - [07/Jun/2025 02:49:48] "[36mGET /static/style.css HTTP/1.1[0m" 304 -
+2025-06-07 02:49:48,325 - KnowledgeBase - INFO - KnowledgeBase initialized with 0 entries
+2025-06-07 02:49:48,326 - KnowledgeBase - INFO - Knowledge base refreshed with 0 entries
+2025-06-07 02:49:48,326 - werkzeug - INFO - 10.2.141.1 - - [07/Jun/2025 02:49:48] "GET /api/videos HTTP/1.1" 200 -
+2025-06-07 02:49:56,981 - werkzeug - INFO - 10.2.141.1 - - [07/Jun/2025 02:49:56] "GET / HTTP/1.1" 200 -
+2025-06-07 02:49:57,001 - werkzeug - INFO - 10.2.141.1 - - [07/Jun/2025 02:49:57] "[36mGET /static/style.css HTTP/1.1[0m" 304 -
+2025-06-07 03:06:38,375 - VideoMonitor - INFO - VideoProcessor initialized with input_dir=video_inputs, output_dir=video_outputs
+2025-06-07 03:06:38,376 - VideoMonitor - INFO - VideoMonitor initialized with input_dir=video_inputs
+2025-06-07 03:06:38,376 - VideoMonitor - INFO - Checking for existing files in video_inputs
+2025-06-07 03:06:38,377 - VideoMonitor - INFO - Started monitoring directory: video_inputs
+2025-06-07 03:06:38,378 - werkzeug - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://169.254.0.21:5000
+2025-06-07 03:06:38,378 - werkzeug - INFO - [33mPress CTRL+C to quit[0m
+2025-06-07 03:07:15,004 - werkzeug - INFO - 10.2.141.1 - - [07/Jun/2025 03:07:15] "GET / HTTP/1.1" 200 -
+2025-06-07 03:07:15,031 - werkzeug - INFO - 10.2.141.1 - - [07/Jun/2025 03:07:15] "GET /static/modern.css HTTP/1.1" 200 -
+2025-06-07 03:07:15,032 - werkzeug - INFO - 10.2.141.1 - - [07/Jun/2025 03:07:15] "GET /static/animations.js HTTP/1.1" 200 -
+2025-06-07 03:07:15,033 - werkzeug - INFO - 10.2.141.1 - - [07/Jun/2025 03:07:15] "[36mGET /static/style.css HTTP/1.1[0m" 304 -
+2025-06-07 03:07:15,037 - werkzeug - INFO - 10.2.141.1 - - [07/Jun/2025 03:07:15] "GET /static/onboarding.js HTTP/1.1" 200 -
+2025-06-07 03:08:06,714 - werkzeug - INFO - 10.2.141.1 - - [07/Jun/2025 03:08:06] "GET / HTTP/1.1" 200 -
+2025-06-07 03:08:06,738 - werkzeug - INFO - 10.2.141.1 - - [07/Jun/2025 03:08:06] "[36mGET /static/modern.css HTTP/1.1[0m" 304 -
+2025-06-07 03:08:06,741 - werkzeug - INFO - 10.2.141.1 - - [07/Jun/2025 03:08:06] "[36mGET /static/onboarding.js HTTP/1.1[0m" 304 -
+2025-06-07 03:08:06,742 - werkzeug - INFO - 10.2.141.1 - - [07/Jun/2025 03:08:06] "[36mGET /static/style.css HTTP/1.1[0m" 304 -
+2025-06-07 03:08:06,744 - werkzeug - INFO - 10.2.141.1 - - [07/Jun/2025 03:08:06] "[36mGET /static/animations.js HTTP/1.1[0m" 304 -
+2025-06-07 03:08:15,539 - werkzeug - INFO - 10.2.141.1 - - [07/Jun/2025 03:08:15] "GET /videos HTTP/1.1" 200 -
+2025-06-07 03:08:15,567 - werkzeug - INFO - 10.2.141.1 - - [07/Jun/2025 03:08:15] "[36mGET /static/modern.css HTTP/1.1[0m" 304 -
+2025-06-07 03:08:15,568 - werkzeug - INFO - 10.2.141.1 - - [07/Jun/2025 03:08:15] "[36mGET /static/style.css HTTP/1.1[0m" 304 -
+2025-06-07 03:08:15,571 - werkzeug - INFO - 10.2.141.1 - - [07/Jun/2025 03:08:15] "[36mGET /static/animations.js HTTP/1.1[0m" 304 -
+2025-06-07 03:08:15,594 - KnowledgeBase - INFO - KnowledgeBase initialized with 0 entries
+2025-06-07 03:08:15,594 - KnowledgeBase - INFO - Knowledge base refreshed with 0 entries
+2025-06-07 03:08:15,595 - werkzeug - INFO - 10.2.141.1 - - [07/Jun/2025 03:08:15] "GET /api/videos HTTP/1.1" 200 -
+2025-06-07 03:08:27,545 - werkzeug - INFO - 10.2.141.1 - - [07/Jun/2025 03:08:27] "GET / HTTP/1.1" 200 -
+2025-06-07 03:08:27,569 - werkzeug - INFO - 10.2.141.1 - - [07/Jun/2025 03:08:27] "[36mGET /static/modern.css HTTP/1.1[0m" 304 -
+2025-06-07 03:08:27,570 - werkzeug - INFO - 10.2.141.1 - - [07/Jun/2025 03:08:27] "[36mGET /static/style.css HTTP/1.1[0m" 304 -
+2025-06-07 03:08:27,575 - werkzeug - INFO - 10.2.141.1 - - [07/Jun/2025 03:08:27] "[36mGET /static/animations.js HTTP/1.1[0m" 304 -
+2025-06-07 03:08:27,579 - werkzeug - INFO - 10.2.141.1 - - [07/Jun/2025 03:08:27] "[36mGET /static/onboarding.js HTTP/1.1[0m" 304 -

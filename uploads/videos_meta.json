@@ -1,0 +1,61 @@
+{
+  "vid_20230608120000": {
+    "id": "vid_20230608120000",
+    "title": "Getting Started with Python",
+    "filename": "vid_20230608120000_getting_started.mp4",
+    "original_name": "getting_started.mp4",
+    "upload_date": "2023-06-08T12:00:00",
+    "size": 5242880,
+    "mimetype": "video/mp4",
+    "processed": true,
+    "has_thumbnail": true,
+    "transcript_available": true,
+    "language": "en",
+    "language_name": "English",
+    "metadata": {
+      "duration": "00:15:30",
+      "resolution": "1920x1080",
+      "tags": ["python", "tutorial", "beginners"]
+    },
+    "transcript": "In this video, we'll cover the basics of Python programming. Python is a high-level, interpreted programming language known for its readability and versatility..."
+  },
+  "vid_20230608130000": {
+    "id": "vid_20230608130000",
+    "title": "Advanced Python Features",
+    "filename": "vid_20230608130000_advanced_python.mp4",
+    "original_name": "advanced_python.mp4",
+    "upload_date": "2023-06-08T13:00:00",
+    "size": 10485760,
+    "mimetype": "video/mp4",
+    "processed": true,
+    "has_thumbnail": true,
+    "transcript_available": true,
+    "language": "en",
+    "language_name": "English",
+    "metadata": {
+      "duration": "00:25:45",
+      "resolution": "1920x1080",
+      "tags": ["python", "advanced", "decorators", "generators"]
+    },
+    "transcript": "Today we'll explore some of Python's more advanced features including decorators, generators, and context managers..."
+  },
+  "vid_20230608140000": {
+    "id": "vid_20230608140000",
+    "title": "Web Development with Flask",
+    "filename": "vid_20230608140000_flask_webdev.mp4",
+    "original_name": "flask_webdev.mp4",
+    "upload_date": "2023-06-08T14:00:00",
+    "size": 15728640,
+    "mimetype": "video/mp4",
+    "processed": false,
+    "has_thumbnail": false,
+    "transcript_available": false,
+    "language": "en",
+    "language_name": "English",
+    "metadata": {
+      "duration": "00:35:20",
+      "resolution": "1920x1080",
+      "tags": ["python", "flask", "web", "tutorial"]
+    }
+  }
+}

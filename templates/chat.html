@@ -1,0 +1,805 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <a href="/" class="back-btn" aria-label="Back to upload page">&#8592; Back</a>
+    <div class="container">
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        
+        <h1>Video Transcriber</h1>
+        <div class="chat-container">
+            <div class="step-indicator">
+                <span class="step">1</span>
+                <span class="step">2</span>
+                <span class="step active">3</span>
+            </div>
+            <h1 class="chat-title">Ask a question about the video</h1>
+            
+            {% if classification and classification.primary_domain != 'unknown' %}
+            <div class="content-classification">
+                <div class="classification-badge">
+                    <span class="domain-label">Content Type:</span>
+                    <span class="domain-value">{{ classification.primary_domain|replace('_', ' ')|title }}</span>
+                    <span class="confidence-value">({{ (classification.confidence * 100)|round(1) }}% confidence)</span>
+                </div>
+            </div>
+            {% endif %}
+            
+            <div class="suggestion-bar">
+                <b>Content-Based Suggestions:</b>
+                {% if suggestions %}
+                    {% for suggestion in suggestions %}
+                        <span class="suggestion" onclick="setSuggestion('{{ suggestion }}')">{{ suggestion }}</span>
+                        {% if not loop.last %} | {% endif %}
+                    {% endfor %}
+                {% else %}
+                    <span class="suggestion" onclick="setSuggestion('What is the main topic of the video?')">Main topic</span> |
+                    <span class="suggestion" onclick="setSuggestion('Who are the participants?')">Participants</span> |
+                    <span class="suggestion" onclick="setSuggestion('What decisions were made?')">Decisions</span> |
+                    <span class="suggestion" onclick="setSuggestion('What are the action items?')">Action items</span> |
+                    <span class="suggestion" onclick="setSuggestion('Summarize the video.')">Summary</span>
+                {% endif %}
+            </div>
+            
+            <div class="suggestion-bar general-suggestions">
+                <b>General Suggestions:</b>
+                <span class="suggestion" onclick="setSuggestion('List all names mentioned in the transcript.')">List names</span> |
+                <span class="suggestion" onclick="setSuggestion('Extract all dates or times mentioned.')">Extract dates/times</span> |
+                <span class="suggestion" onclick="setSuggestion('What was the most important quote?')">Important quote</span> |
+                <span class="suggestion" onclick="setSuggestion('What is the overall sentiment of the discussion?')">Sentiment</span> |
+                <span class="suggestion" onclick="setSuggestion('Summarize the first half of the video.')">First half summary</span> |
+                <span class="suggestion" onclick="setSuggestion('Summarize the second half of the video.')">Second half summary</span> |
+                <span class="suggestion" onclick="setSuggestion('What are the next steps discussed?')">Next steps</span> |
+                <span class="suggestion" onclick="setSuggestion('Who asked the most questions?')">Most questions</span> |
+                <span class="suggestion" onclick="setSuggestion('What problems or challenges were discussed?')">Problems/challenges</span> |
+                <span class="suggestion" onclick="setSuggestion('What recommendations were given?')">Recommendations</span>
+            </div>
+            
+            <div class="input-row">
+                <div class="input-container">
+                    <input 
+                        type="text" 
+                        id="question" 
+                        placeholder="Type your question..." 
+                        maxlength="200" 
+                        autocomplete="off"
+                        aria-label="Type your question"
+                    >
+                    <div id="char-count" class="char-count">0/200</div>
+                </div>
+                <div class="button-group">
+                    <button 
+                        id="send-btn" 
+                        class="send-btn" 
+                        onclick="sendQuestion()"
+                        aria-label="Send message"
+                    >
+                        <span class="btn-text">Send</span>
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                    <button 
+                        class="pdf-btn" 
+                        onclick="generatePDF()" 
+                        title="Download Transcript as PDF"
+                        aria-label="Download transcript as PDF"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                            <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
+                            <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/>
+                        </svg>
+                        <span class="btn-text">PDF</span>
+                    </button>
+                </div>
+            </div>
+            <div id="empty-state" class="empty-state" style="display: none;">
+                <i class="fas fa-comment-dots"></i>
+                <p>Ask a question about the video to get started</p>
+            </div>
+            <div id="pdf-title-modal" class="modal">
+                <div class="modal-content">
+                    <h3>Enter Document Title</h3>
+                    <input type="text" id="pdf-title" placeholder="Enter title for the PDF" value="Meeting Transcript">
+                    <div class="modal-buttons">
+                        <button onclick="document.getElementById('pdf-title-modal').style.display='none'">Cancel</button>
+                        <button onclick="confirmPDF()" class="primary">Generate PDF</button>
+                    </div>
+                </div>
+            </div>
+            <div id="loading" class="loading-spinner" style="display:none;"></div>
+            <div id="toast" class="toast"></div>
+            <div class="response-card animated" id="response-card" style="display:none;">
+                <div class="qa-label">Response</div>
+                <div id="response-question" class="qa-question"></div>
+                <div id="response-answer" class="qa-answer"></div>
+                <div id="response-time" class="response-time" style="text-align: right; font-size: 0.8em; color: #666; margin-top: 10px;"></div>
+            </div>
+        </div>
+    </div>
+    <script>
+        function generatePDF() {
+            document.getElementById('pdf-title-modal').style.display = 'flex';
+        }
+
+        function confirmPDF() {
+            const title = document.getElementById('pdf-title').value.trim() || 'Meeting Transcript';
+            document.getElementById('pdf-title-modal').style.display = 'none';
+            
+            // Show loading state
+            const originalText = document.querySelector('.pdf-btn').innerHTML;
+            const pdfBtn = document.querySelector('.pdf-btn');
+            const toast = document.getElementById('toast');
+            
+            pdfBtn.disabled = true;
+            pdfBtn.innerHTML = '<div class="spinner"></div> Generating...';
+            
+            // Create form and submit using fetch API for better error handling
+            const formData = new FormData();
+            formData.append('title', title);
+            
+            console.log('Starting PDF generation with title:', title);
+            
+            let responseClone;  // Store response for later use
+            
+            fetch('/generate_pdf', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'Accept': 'application/json, application/pdf'
+                }
+            })
+            .then(response => {
+                console.log('Response status:', response.status);
+                responseClone = response.clone();  // Clone the response for later use
+                
+                // Check if response is JSON (error) or PDF (success)
+                const contentType = response.headers.get('content-type');
+                if (contentType && contentType.includes('application/json')) {
+                    return response.json().then(err => {
+                        // Handle JSON error response
+                        console.error('Server error:', err);
+                        throw new Error(err.details || 'Failed to generate PDF. Please try again.');
+                    });
+                }
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                return response.blob();
+            })
+            .then(blob => {
+                if (!blob) {
+                    throw new Error('Received empty response from server');
+                }
+                
+                console.log('PDF blob received, size:', blob.size, 'bytes');
+                
+                // Create a download link and trigger it
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                
+                // Try to get filename from content-disposition header
+                const contentDisposition = responseClone.headers.get('content-disposition');
+                let filename = `transcript_${new Date().toISOString().slice(0, 10)}.pdf`;
+                
+                if (contentDisposition) {
+                    const filenameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+                    if (filenameMatch != null && filenameMatch[1]) { 
+                        filename = filenameMatch[1].replace(/['"]/g, '');
+                    }
+                }
+                
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                
+                // Clean up
+                setTimeout(() => {
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+                }, 100);
+                
+                // Show success message
+                showToast('PDF generated successfully!');
+            })
+            .catch(error => {
+                console.error('Error generating PDF:', error);
+                let errorMessage = 'Error generating PDF. ';
+                
+                if (error.message) {
+                    errorMessage += error.message;
+                } else if (error.statusText) {
+                    errorMessage += error.statusText;
+                }
+                
+                // Show error in toast
+                showToast(errorMessage);
+                
+                // Also log to console for debugging
+                console.error('Full error:', error);
+            })
+            .finally(() => {
+                // Reset button state
+                pdfBtn.disabled = false;
+                pdfBtn.innerHTML = originalText;
+            });
+        }
+
+        function setSuggestion(text) {
+            document.getElementById('question').value = text;
+            document.getElementById('question').focus();
+        }
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            toast.innerText = msg;
+            toast.classList.add('show-toast');
+            toast.style.display = 'block';
+            setTimeout(() => {
+                toast.classList.remove('show-toast');
+                toast.style.display = 'none';
+            }, 2500);
+        }
+        function showLoading(show) {
+            document.getElementById('loading').style.display = show ? 'block' : 'none';
+        }
+        function sendQuestion() {
+            const user_input = document.getElementById('question').value.trim();
+            if (!user_input) {
+                showToast('Please enter a question.');
+                return;
+            }
+            showLoading(true);
+            document.getElementById('response-card').style.display = 'none';
+            fetch('/ask', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ question: user_input })
+            })
+            .then(response => response.json())
+            .then(data => {
+                showLoading(false);
+                document.getElementById('response-question').innerText = 'Q: ' + user_input;
+                document.getElementById('response-answer').innerText = data.response;
+                const card = document.getElementById('response-card');
+                card.style.display = 'block';
+                card.classList.remove('fade-in');
+                void card.offsetWidth; // trigger reflow
+                card.classList.add('fade-in');
+            })
+            .catch(err => {
+                showLoading(false);
+                console.error('Fetch error:', err);
+                showToast('Error: Unable to get response. Check server connection.');
+            });
+        }
+        function downloadPDF() {
+            const question = document.getElementById('response-question').innerText;
+            const answer = document.getElementById('response-answer').innerText;
+            const pdfContent = `
+                <div class="transcript-container">
+                <div class="transcript-header">
+                    <h2>Transcript</h2>
+                    <div class="transcript-info">
+                        <span>File: {{ filename or 'N/A' }}</span>
+                        <span>{{ "{:,}".format(transcript_length) }} characters</span>
+                    </div>
+                </div>
+                <div class="transcript" id="transcript">{{ transcript }}</div>
+            </div>
+            <h1>Chat Transcript</h1>
+            <h2>Question</h2>
+            <p>${question}</p>
+            <h2>Answer</h2>
+            <p>${answer}</p>
+            `;
+            const pdf = new jsPDF();
+            pdf.fromHTML(pdfContent);
+            pdf.save('chat_transcript.pdf');
+        }
+        document.getElementById('question').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') sendQuestion();
+        });
+    </script>
+    <style>
+        /* Input area styling */
+        .input-row {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            width: 100%;
+        }
+        
+        .input-container {
+            flex: 1;
+            position: relative;
+        }
+        
+        #question {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        #question:focus {
+            border-color: #4a6baf;
+            box-shadow: 0 0 0 3px rgba(74, 107, 175, 0.2);
+            outline: none;
+        }
+        
+        .char-count {
+            position: absolute;
+            bottom: -20px;
+            right: 5px;
+            font-size: 12px;
+            color: #888;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .send-btn, .pdf-btn {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 0 20px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .send-btn {
+            background-color: #4a6baf;
+            color: white;
+        }
+        
+        .send-btn:hover {
+            background-color: #3a5a9f;
+            transform: translateY(-1px);
+        }
+        
+        .send-btn:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .pdf-btn {
+            background-color: #f0f0f0;
+            color: #555;
+        }
+        
+        .pdf-btn:hover {
+            background-color: #e0e0e0;
+        }
+        
+        .btn-text {
+            display: inline-block;
+        }
+        
+        @media (max-width: 600px) {
+            .input-row {
+                flex-direction: column;
+            }
+            
+            .button-group {
+                width: 100%;
+                justify-content: space-between;
+            }
+            
+            .send-btn, .pdf-btn {
+                flex: 1;
+                justify-content: center;
+            }
+            
+            .btn-text {
+                display: none;
+            }
+        }
+        
+        /* Accessibility styles */
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border-width: 0;
+        }
+        
+        /* Loading spinner animation */
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .fa-spinner {
+            animation: spin 1s linear infinite;
+        }
+        
+        /* Improved response card styling */
+        .response-card {
+            background: #ffffff;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            margin: 20px 0;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+        
+        .response-card.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        
+        .qa-label {
+            font-weight: bold;
+            color: #4a6baf;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+        
+        .qa-question {
+            font-weight: 500;
+            margin-bottom: 15px;
+            color: #333;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .qa-answer {
+            line-height: 1.6;
+            color: #444;
+        }
+        
+        .highlight-new {
+            animation: highlight 1.5s ease-out;
+        }
+        
+        @keyframes highlight {
+            0% { background-color: rgba(74, 107, 175, 0.1); }
+            100% { background-color: transparent; }
+        }
+        
+        .content-classification {
+            margin: 10px 0;
+            text-align: center;
+        }
+        
+        .classification-badge {
+            display: inline-block;
+            background-color: #f8f9fa;
+            border-radius: 20px;
+            padding: 8px 16px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            border: 1px solid #e9ecef;
+        }
+        
+        .domain-label {
+            font-weight: bold;
+            color: #495057;
+            margin-right: 5px;
+        }
+        
+        .domain-value {
+            color: #0074d9;
+            font-weight: bold;
+        }
+        
+        .confidence-value {
+            color: #6c757d;
+            font-size: 0.9em;
+            margin-left: 5px;
+        }
+        
+        .suggestion-bar {
+            background-color: #f8f9fa;
+            padding: 10px 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+            line-height: 2;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            overflow-x: auto;
+            white-space: nowrap;
+        }
+        
+        .general-suggestions {
+            background-color: #f0f4f8;
+        }
+        
+        .suggestion {
+            cursor: pointer;
+            color: #0074d9;
+            padding: 3px 8px;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+            display: inline-block;
+        }
+        
+        .suggestion:hover {
+            background-color: #e6f2ff;
+            text-decoration: underline;
+        }
+        
+        .input-row {
+            display: flex;
+            gap: 10px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        
+        .pdf-btn {
+            background-color: #e74c3c;
+            color: white;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: background-color 0.2s;
+            font-size: 14px;
+        }
+        
+        .pdf-btn:hover {
+            background-color: #c0392b;
+        }
+        
+        .pdf-btn:disabled {
+            background-color: #95a5a6;
+            cursor: not-allowed;
+        }
+        
+        .spinner {
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top: 2px solid white;
+            width: 16px;
+            height: 16px;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        
+        .modal-content {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 400px;
+        }
+        
+        .modal h3 {
+            margin-top: 0;
+            color: #2c3e50;
+        }
+        
+        .modal input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        
+        .modal-buttons {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .modal-buttons button {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        .modal-buttons button.primary {
+            background-color: #3498db;
+            color: white;
+        }
+        
+        .modal-buttons button.primary:hover {
+            background-color: #2980b9;
+        }
+        .input-row > * {
+            margin: 5px 0;
+        }
+        .back-btn {
+            position: absolute;
+            left: 32px;
+            top: 20px;
+            color: #0074d9;
+            background: #eaf6ff;
+            border-radius: 8px;
+            padding: 8px 18px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 1rem;
+            transition: background 0.2s, color 0.2s;
+            z-index: 10;
+        }
+        .back-btn:hover {
+            background: #0074d9;
+            color: #fff;
+        }
+        .step-indicator {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .step {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background-color: #e0e0e0;
+            color: #757575;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 0 10px;
+            font-weight: bold;
+            position: relative;
+        }
+        .step.active {
+            background-color: #0074d9;
+            color: white;
+        }
+        .step:not(:last-child):after {
+            content: '';
+            position: absolute;
+            width: 20px;
+            height: 2px;
+            background-color: #e0e0e0;
+            left: 30px;
+        }
+        .step.active:not(:last-child):after {
+            background-color: #0074d9;
+        }
+        .chat-title {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #2c3e50;
+            font-size: 1.8rem;
+        }
+        #question {
+            flex: 1;
+            padding: 12px 16px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+            min-width: 200px;
+        }
+        .send-btn {
+            background-color: #0074d9;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.2s;
+        }
+        .send-btn:hover {
+            background-color: #0063b1;
+        }
+        .loading-spinner {
+            margin: 20px auto;
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-radius: 50%;
+            border-top: 4px solid #0074d9;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #333;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 4px;
+            z-index: 1000;
+            display: none;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .show-toast {
+            opacity: 1;
+        }
+        .response-card {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            margin-top: 20px;
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        .fade-in {
+            animation: fadeIn 0.5s forwards;
+        }
+        @keyframes fadeIn {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        .qa-label {
+            font-weight: bold;
+            color: #0074d9;
+            margin-bottom: 10px;
+            font-size: 1.2rem;
+        }
+        .qa-question {
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #2c3e50;
+        }
+        .qa-answer {
+            line-height: 1.6;
+            color: #34495e;
+            white-space: pre-wrap;
+        }
+        @media (max-width: 768px) {
+            .back-btn {
+                position: static;
+                display: inline-block;
+                margin: 10px 0;
+            }
+            .input-row {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .send-btn, .pdf-btn {
+                width: 100%;
+            }
+        }
+    </style>
+{% endblock %}
+

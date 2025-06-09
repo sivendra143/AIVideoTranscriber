@@ -1,0 +1,506 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <a href="/" class="back-btn" aria-label="Back to upload page">
+        <i class="fas fa-arrow-left"></i> Back to Upload
+    </a>
+    
+    <div class="chat-container animated fade-in">
+        <div class="step-indicator">
+            <span class="step completed"><i class="fas fa-upload"></i></span>
+            <span class="step completed"><i class="fas fa-file-alt"></i></span>
+            <span class="step active"><i class="fas fa-comments"></i></span>
+        </div>
+        <h1 class="chat-title">Ask Questions About Your Video</h1>
+        
+        <!-- Transcript Section -->
+        <div class="transcript-container">
+            <div class="transcript-header">
+                <h2><i class="fas fa-file-alt"></i> Transcript</h2>
+                <div class="transcript-info">
+                    <span>{{ filename }}</span>
+                    <span>{{ "{:,}".format(transcript_length) }} characters</span>
+                </div>
+            </div>
+            <div class="transcript" id="transcript">{{ transcript }}</div>
+        </div>
+        
+        <!-- Suggestion Bar -->
+        <div class="suggestion-bar">
+            <div class="suggestion-header">
+                <i class="fas fa-lightbulb"></i>
+                <span>Quick Questions:</span>
+            </div>
+            <div class="suggestion-tags">
+                <button class="suggestion-tag" onclick="setSuggestion('What is the main topic of the video?')">
+                    <i class="fas fa-question-circle"></i> Main Topic
+                </button>
+                <button class="suggestion-tag" onclick="setSuggestion('Who are the participants?')">
+                    <i class="fas fa-users"></i> Participants
+                </button>
+                <button class="suggestion-tag" onclick="setSuggestion('What decisions were made?')">
+                    <i class="fas fa-clipboard-check"></i> Decisions
+                </button>
+                <button class="suggestion-tag" onclick="setSuggestion('What are the action items?')">
+                    <i class="fas fa-tasks"></i> Action Items
+                </button>
+                <button class="suggestion-tag" onclick="setSuggestion('Summarize the video in 3 bullet points.')">
+                    <i class="fas fa-file-alt"></i> Summary
+                </button>
+            </div>
+        </div>
+        
+        <!-- Input Row -->
+        <div class="input-row">
+            <div class="input-group">
+                <input 
+                    type="text" 
+                    id="question" 
+                    placeholder="Ask something about the video..." 
+                    maxlength="500" 
+                    autocomplete="off"
+                    aria-label="Ask a question about the video"
+                >
+                <div class="input-buttons">
+                    <button 
+                        class="send-btn" 
+                        id="send-btn"
+                        onclick="sendQuestion()"
+                        aria-label="Send question"
+                    >
+                        <span class="btn-text">Send</span>
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                    <div class="divider"></div>
+                    <button 
+                        class="action-btn" 
+                        onclick="generatePDF()" 
+                        title="Download Transcript as PDF"
+                        aria-label="Download PDF"
+                    >
+                        <i class="fas fa-file-pdf"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="char-counter">
+                <span id="char-count">0</span>/500
+            </div>
+        </div>
+        
+        <!-- PDF Title Modal -->
+        <div id="pdf-title-modal" class="modal">
+            <div class="modal-content">
+                <h3>Enter Document Title</h3>
+                <input type="text" id="pdf-title" placeholder="Enter title for the PDF" value="{{ filename }} Transcript">
+                <div class="modal-buttons">
+                    <button onclick="document.getElementById('pdf-title-modal').style.display='none'">Cancel</button>
+                    <button onclick="confirmPDF()" class="primary">Generate PDF</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Loading State -->
+        <div id="loading" class="loading-state" style="display:none;">
+            <div class="loading-spinner"></div>
+            <p class="loading-text">Analyzing your question...</p>
+        </div>
+        
+        <!-- Response Card -->
+        <div class="response-card animated fade-in" id="response-card" style="display:none;">
+            <div class="response-header">
+                <div class="qa-label">
+                    <i class="fas fa-robot"></i>
+                    <span>AI Response</span>
+                </div>
+                <div class="response-actions">
+                    <button class="icon-btn" onclick="copyResponse()" title="Copy to clipboard">
+                        <i class="far fa-copy"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="response-content">
+                <div id="response-question" class="qa-question"></div>
+                <div id="response-answer" class="qa-answer"></div>
+            </div>
+            <div class="response-footer">
+                <span class="timestamp" id="response-time"></span>
+            </div>
+        </div>
+        
+        <!-- Empty State -->
+        <div id="empty-state" class="empty-state">
+            <div class="empty-icon">
+                <i class="fas fa-comment-dots"></i>
+            </div>
+            <h3>Ask a question about your video</h3>
+            <p>Try asking about the content, participants, or key points from the video.</p>
+        </div>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+    <script>
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            // Focus the input field on page load
+            const questionInput = document.getElementById('question');
+            if (questionInput) {
+                questionInput.focus();
+                
+                // Character counter
+                questionInput.addEventListener('input', function() {
+                    document.getElementById('char-count').textContent = this.value.length;
+                });
+                
+                // Handle Enter key to submit
+                questionInput.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        sendQuestion();
+                    }
+                });
+            }
+            
+            // Add animation to steps
+            document.querySelectorAll('.step').forEach((el, i) => {
+                setTimeout(() => {
+                    el.style.opacity = '1';
+                    el.style.transform = 'translateY(0)';
+                }, i * 200);
+            });
+            
+            // Initialize tooltips
+            document.querySelectorAll('[title]').forEach(tooltip => {
+                tooltip.setAttribute('data-tooltip', tooltip.getAttribute('title'));
+                tooltip.addEventListener('mouseenter', showTooltip);
+                tooltip.addEventListener('mouseleave', hideTooltip);
+            });
+        });
+        
+        // Tooltip functions
+        function showTooltip(e) {
+            const tooltip = document.createElement('div');
+            tooltip.className = 'tooltip';
+            tooltip.textContent = this.getAttribute('title');
+            document.body.appendChild(tooltip);
+            
+            const rect = this.getBoundingClientRect();
+            tooltip.style.top = `${rect.top - tooltip.offsetHeight - 10}px`;
+            tooltip.style.left = `${rect.left + (this.offsetWidth / 2) - (tooltip.offsetWidth / 2)}px`;
+            
+            this.tooltip = tooltip;
+        }
+        
+        function hideTooltip() {
+            if (this.tooltip) {
+                this.tooltip.remove();
+                this.tooltip = null;
+            }
+        }
+        
+        // Set suggestion in the input field
+        function setSuggestion(text) {
+            const questionInput = document.getElementById('question');
+            questionInput.value = text;
+            questionInput.focus();
+            // Update character counter
+            document.getElementById('char-count').textContent = text.length;
+            // Add a subtle animation to the input
+            questionInput.classList.add('pulse');
+            setTimeout(() => questionInput.classList.remove('pulse'), 300);
+        }
+        
+        // Send question to the server
+        function sendQuestion() {
+            const questionInput = document.getElementById('question');
+            const question = questionInput.value.trim();
+            
+            if (!question) {
+                showToast('Please enter a question', 'error');
+                questionInput.focus();
+                return;
+            }
+            
+            const loading = document.getElementById('loading');
+            const responseCard = document.getElementById('response-card');
+            const responseQuestion = document.getElementById('response-question');
+            const responseAnswer = document.getElementById('response-answer');
+            const emptyState = document.getElementById('empty-state');
+            const sendBtn = document.getElementById('send-btn');
+            
+            // Show loading state
+            loading.style.display = 'flex';
+            responseCard.style.display = 'none';
+            emptyState.style.display = 'none';
+            
+            // Disable input and button during request
+            questionInput.disabled = true;
+            sendBtn.disabled = true;
+            sendBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            
+            // Start timing the response
+            const startTime = Date.now();
+            
+            // Send request to server
+            fetch('/ask', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({ question: question })
+            })
+            .then(async response => {
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(errorData.error || `Server returned ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                
+                // Calculate response time
+                const responseTime = ((Date.now() - startTime) / 1000).toFixed(1);
+                
+                // Update UI with response
+                responseQuestion.textContent = question;
+                responseAnswer.innerHTML = formatResponse(data.answer);
+                document.getElementById('response-time').textContent = `Generated in ${responseTime}s`;
+                
+                // Show the response card with animation
+                responseCard.style.display = 'block';
+                responseCard.classList.add('fade-in');
+                
+                // Hide empty state
+                emptyState.style.display = 'none';
+                
+                // Clear input but keep focus
+                questionInput.value = '';
+                questionInput.focus();
+                document.getElementById('char-count').textContent = '0';
+                
+                // Scroll to response
+                setTimeout(() => {
+                    responseCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }, 100);
+                
+                // Log the interaction
+                console.log(`Question answered in ${responseTime}s`);
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showToast(error.message || 'An error occurred while processing your question.', 'error');
+                emptyState.style.display = 'flex';
+            })
+            .finally(() => {
+                loading.style.display = 'none';
+                questionInput.disabled = false;
+                sendBtn.disabled = false;
+                sendBtn.innerHTML = '<span class="btn-text">Send</span><i class="fas fa-paper-plane"></i>';
+            });
+        }
+        
+        // Format response with markdown-like formatting
+        function formatResponse(text) {
+            if (!text) return '';
+            
+            // Handle bullet points
+            text = text.replace(/^\s*[-*]\s+/gm, '• ');
+            
+            // Handle bold text
+            text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+            
+            // Handle italic text
+            text = text.replace(/\*(.*?)\*/g, '<em>$1</em>');
+            
+            // Handle line breaks
+            text = text.replace(/\n/g, '<br>');
+            
+            // Handle code blocks
+            text = text.replace(/```(\w*)\n([\s\S]*?)\n```/g, 
+                '<pre><code class="language-$1">$2</code></pre>');
+            
+            // Handle inline code
+            text = text.replace(/`([^`]+)`/g, '<code>$1</code>');
+            
+            return text;
+        }
+        
+        // Copy response to clipboard
+        async function copyResponse() {
+            const responseText = document.getElementById('response-answer').textContent;
+            try {
+                await navigator.clipboard.writeText(responseText);
+                showToast('Response copied to clipboard!', 'success');
+            } catch (err) {
+                console.error('Failed to copy text: ', err);
+                showToast('Failed to copy response', 'error');
+            }
+        }
+        
+        // PDF Generation
+        function generatePDF() {
+            const modal = document.getElementById('pdf-title-modal');
+            const titleInput = document.getElementById('pdf-title');
+            
+            // Reset and show modal
+            const defaultTitle = '{{ filename }}' ? '{{ filename }} Transcript' : 'Meeting Transcript';
+            titleInput.value = defaultTitle;
+            modal.style.display = 'flex';
+            
+            // Focus the input
+            setTimeout(() => titleInput.focus(), 100);
+            
+            // Close modal when clicking outside
+            modal.onclick = function(e) {
+                if (e.target === modal) {
+                    modal.style.display = 'none';
+                }
+            };
+            
+            // Handle Escape key
+            document.addEventListener('keydown', function onEsc(e) {
+                if (e.key === 'Escape') {
+                    modal.style.display = 'none';
+                    document.removeEventListener('keydown', onEsc);
+                }
+            });
+            
+            // Handle Enter key
+            titleInput.addEventListener('keydown', function onEnter(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    confirmPDF();
+                    titleInput.removeEventListener('keydown', onEnter);
+                }
+            });
+        }
+        
+        function confirmPDF() {
+            const title = document.getElementById('pdf-title').value.trim() || 'Transcript';
+            const modal = document.getElementById('pdf-title-modal');
+            
+            // Hide modal
+            modal.style.display = 'none';
+            
+            // Show loading toast
+            showToast('Generating PDF...', 'info');
+            
+            // Create form and submit
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '/generate_pdf';
+            
+            const titleInput = document.createElement('input');
+            titleInput.type = 'hidden';
+            titleInput.name = 'title';
+            titleInput.value = title;
+            
+            form.appendChild(titleInput);
+            document.body.appendChild(form);
+            form.submit();
+            
+            // Remove form after submission
+            setTimeout(() => {
+                document.body.removeChild(form);
+            }, 100);
+        }
+        
+        // Show toast notification (using the global function from base.html)
+        function showToast(message, type = 'error', duration = 5000) {
+            // Check if the global function exists, otherwise create a local implementation
+            if (typeof window.showToast === 'function') {
+                window.showToast(message, type, duration);
+            } else {
+                const toast = document.createElement('div');
+                toast.className = `toast ${type}`;
+                toast.textContent = message;
+                document.body.appendChild(toast);
+                
+                setTimeout(() => {
+                    toast.classList.add('show');
+                }, 10);
+                
+                setTimeout(() => {
+                    toast.classList.remove('show');
+                    setTimeout(() => toast.remove(), 300);
+                }, duration);
+            }
+        }
+    </script>
+    
+    <style>
+        /* Additional styles specific to chat page */
+        .transcript {
+            position: relative;
+            font-size: 0.95rem;
+            line-height: 1.7;
+        }
+        
+        .transcript::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 40px;
+            background: linear-gradient(to bottom, rgba(255,255,255,0) 0%, rgba(255,255,255,1) 100%);
+            pointer-events: none;
+        }
+        
+        @media (prefers-color-scheme: dark) {
+            .transcript::after {
+                background: linear-gradient(to bottom, rgba(30,30,30,0) 0%, rgba(30,30,30,1) 100%);
+            }
+        }
+        
+        .qa-question {
+            position: relative;
+            padding-left: 20px;
+        }
+        
+        .qa-question::before {
+            content: '"';
+            position: absolute;
+            left: 0;
+            top: 0;
+            font-size: 1.5rem;
+            color: var(--primary);
+            font-family: Georgia, serif;
+            line-height: 1;
+        }
+        
+        .qa-question::after {
+            content: '"';
+            font-size: 1.5rem;
+            color: var(--primary);
+            font-family: Georgia, serif;
+            line-height: 1;
+            margin-left: 5px;
+        }
+        
+        /* Animated typing effect for response */
+        @keyframes typing {
+            from { width: 0 }
+            to { width: 100% }
+        }
+        
+        .typing-animation {
+            display: inline-block;
+            overflow: hidden;
+            border-right: 2px solid var(--primary);
+            white-space: nowrap;
+            animation: 
+                typing 3.5s steps(40, end),
+                blink-caret .75s step-end infinite;
+        }
+        
+        @keyframes blink-caret {
+            from, to { border-color: transparent }
+            50% { border-color: var(--primary) }
+        }
+    </style>
+{% endblock %}
