@@ -4,10 +4,15 @@
  * Description: Adds modern animations, transitions, and interactive elements
  */
 
+// Always restore scroll on page load (safety patch)
+window.addEventListener('DOMContentLoaded', function() {
+  document.body.style.overflow = '';
+});
+
 // Initialize when DOM is fully loaded
 document.addEventListener('DOMContentLoaded', function() {
   // Initialize all components
-  initParticleBackground();
+  // initParticleBackground(); // Temporarily disabled for scroll testing
   initFileUpload();
   initAnimations();
   initStepIndicator();
