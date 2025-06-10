@@ -160,6 +160,52 @@
     </div>
 {% endblock %}
 
+<!-- Onboarding Help and Reset (for dev/testing) -->
+<script>
+// Ensure onboarding help/reset is available on library page
+(function() {
+    document.addEventListener('DOMContentLoaded', function() {
+        // Add Reset Onboarding button if not present
+        if (!document.getElementById('resetOnboardingBtn')) {
+            const footer = document.querySelector('footer') || document.body;
+            const btn = document.createElement('button');
+            btn.id = 'resetOnboardingBtn';
+            btn.textContent = 'Reset Onboarding';
+            btn.className = 'btn btn-outline';
+            btn.style.margin = '12px';
+            btn.onclick = function() {
+                localStorage.removeItem('onboardingComplete');
+                localStorage.removeItem('onboarding_seen');
+                Object.keys(localStorage).forEach(k => { if (k.startsWith('onboarding_')) localStorage.removeItem(k); });
+                if (window.showToast) showToast('Onboarding reset. Reload to see tour.', 'info');
+            };
+            footer.appendChild(btn);
+        }
+        // Add Help button if not present
+        if (!document.getElementById('floatingHelpBtn')) {
+            const helpBtn = document.createElement('button');
+            helpBtn.id = 'floatingHelpBtn';
+            helpBtn.className = 'floating-help';
+            helpBtn.title = 'Show onboarding tour';
+            helpBtn.innerHTML = '<i class="fas fa-question-circle"></i>';
+            helpBtn.style.position = 'fixed';
+            helpBtn.style.bottom = '32px';
+            helpBtn.style.right = '32px';
+            helpBtn.style.zIndex = 10001;
+            helpBtn.onclick = function() {
+                if (typeof window.startOnboardingTour === 'function') {
+                    window.startOnboardingTour();
+                } else {
+                    alert('Onboarding or help coming soon!');
+                }
+            };
+            document.body.appendChild(helpBtn);
+        }
+    });
+})();
+
+</script>
+
 <!-- Upload Modal -->
 <div id="upload-modal" class="modal" style="display: none;">
     <div class="modal-content" style="max-width: 600px;">
@@ -183,6 +229,28 @@
                     <i class="fas fa-upload"></i> Upload Video
                 </button>
             </form>
+            <div id="youtube-tab" class="tab-pane">
+                <form id="youtube-form">
+                    <div class="form-group">
+                        <label for="youtube-url">YouTube URL</label>
+                        <input type="text" id="youtube-url" class="form-control" placeholder="https://www.youtube.com/watch?v=..." required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fab fa-youtube"></i> Analyze YouTube Video
+                    </button>
+                </form>
+            </div>
+            <div id="drive-tab" class="tab-pane">
+                <form id="drive-form">
+                    <div class="form-group">
+                        <label for="drive-link">Google Drive File Link</label>
+                        <input type="text" id="drive-link" class="form-control" placeholder="https://drive.google.com/file/d/..." required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fab fa-google-drive"></i> Analyze Drive File
+                    </button>
+                </form>
+            </div>
             <div id="upload-progress" style="display: none; margin-top: 1rem;">
                 <div class="progress">
                     <div class="progress-bar" id="progress-bar" style="width: 0%;"></div>
@@ -250,6 +318,78 @@ function setupEventListeners() {
     
     // Form submission
     uploadForm.addEventListener('submit', handleUpload);
+    
+    // YouTube form submission
+    document.getElementById('youtube-form').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const youtubeUrl = document.getElementById('youtube-url').value;
+        
+        // Show loading state
+        const submitBtn = this.querySelector('button[type="submit"]');
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+        
+        try {
+            const response = await fetch('/api/videos/youtube', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ url: youtubeUrl })
+            });
+            
+            const data = await response.json();
+            
+            if (response.ok) {
+                showToast('YouTube video processed successfully!', 'success');
+                loadVideos();  // Refresh video list
+                closeUploadModal();
+            } else {
+                showToast(`Error: ${data.error}`, 'error');
+            }
+        } catch (error) {
+            showToast('Network error. Please try again.', 'error');
+            console.error('Error:', error);
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="fab fa-youtube"></i> Analyze YouTube Video';
+        }
+    });
+
+    // Google Drive form submission
+    document.getElementById('drive-form').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const driveLink = document.getElementById('drive-link').value;
+        
+        // Show loading state
+        const submitBtn = this.querySelector('button[type="submit"]');
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+        
+        try {
+            const response = await fetch('/api/videos/drive', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ url: driveLink })
+            });
+            
+            const data = await response.json();
+            
+            if (response.ok) {
+                showToast('Google Drive video processed successfully!', 'success');
+                loadVideos();  // Refresh video list
+                closeUploadModal();
+            } else {
+                showToast(`Error: ${data.error}`, 'error');
+            }
+        } catch (error) {
+            showToast('Network error. Please try again.', 'error');
+            console.error('Error:', error);
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="fab fa-google-drive"></i> Analyze Drive File';
+        }
+    });
 }
 
 function preventDefaults(e) {
@@ -499,51 +639,9 @@ const analyzeAllBtn = document.getElementById('analyze-all-btn');
 
 // Current video ID
 let currentVideoId = null;
-
-// All videos data
 let allVideos = [];
 
 // Load videos
-loadVideos();
-
-// Event listeners
-document.querySelector('.close-modal').addEventListener('click', closeModal);
-
-// Tab switching
-document.querySelectorAll('.tab-btn').forEach(btn => {
-    btn.addEventListener('click', function() {
-        // Remove active class from all tabs
-        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-        document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
-
-        // Add active class to clicked tab
-        this.classList.add('active');
-        const tabId = this.getAttribute('data-tab');
-        document.getElementById(`${tabId}-tab`).classList.add('active');
-    });
-});
-
-// Ask button
-askBtn.addEventListener('click', askQuestion);
-
-// Search
-searchBtn.addEventListener('click', function() {
-    filterVideos();
-});
-
-searchInput.addEventListener('keyup', function(e) {
-    if (e.key === 'Enter') {
-        filterVideos();
-    }
-});
-
-// Language filter
-languageFilter.addEventListener('change', filterVideos);
-
-// Analyze all button
-analyzeAllBtn.addEventListener('click', analyzeAllVideos);
-
-// Functions
 function loadVideos() {
     fetch('/api/videos')
         .then(response => response.json())
@@ -563,6 +661,42 @@ function loadVideos() {
         });
 }
 
+// Event listeners
+if (document.querySelector('.close-modal')) {
+    document.querySelector('.close-modal').addEventListener('click', closeModal);
+}
+
+// Tab switching
+if (document.querySelectorAll('.tab-btn')) {
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            // Remove active class from all tabs
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+            // Add active class to clicked tab
+            this.classList.add('active');
+            const tabId = this.getAttribute('data-tab');
+            document.getElementById(`${tabId}-tab`).classList.add('active');
+        });
+    });
+}
+
+// Ask button
+if (askBtn) askBtn.addEventListener('click', askQuestion);
+
+// Search
+if (searchBtn) searchBtn.addEventListener('click', filterVideos);
+if (searchInput) {
+    searchInput.addEventListener('keyup', function(e) {
+        if (e.key === 'Enter') filterVideos();
+    });
+}
+// Language filter
+if (languageFilter) languageFilter.addEventListener('change', filterVideos);
+// Analyze all button
+if (analyzeAllBtn) analyzeAllBtn.addEventListener('click', analyzeAllVideos);
+
+// Functions
 function displayVideos(videos) {
     if (videos.length === 0) {
         videosContainer.innerHTML = `
@@ -877,195 +1011,36 @@ function analyzeAllVideos() {
 
         // Reload videos
         loadVideos();
-                        document.querySelectorAll('.suggestion-btn').forEach(btn => {
-                            btn.addEventListener('click', function() {
-                                questionInput.value = this.textContent;
-                                questionInput.focus();
-                            });
-                        });
-                    } else {
-                        suggestionsList.innerHTML = '<p>No suggestions available.</p>';
-                    }
-                })
-                .catch(error => {
-                    console.error('Error loading suggestions:', error);
-                    suggestionsList.innerHTML = '<p>Error loading suggestions.</p>';
-                });
-        }
-        
-        function askQuestion() {
-            const question = questionInput.value.trim();
-            if (!question) return;
-            
-            // Add question to history
-            const questionElement = document.createElement('div');
-            questionElement.className = 'qa-item question';
-            questionElement.innerHTML = `
-                <div class="qa-icon">
-                    <i class="fas fa-user"></i>
-                </div>
-                <div class="qa-content">
-                    <p>${question}</p>
-                </div>
-            `;
-            qaHistory.appendChild(questionElement);
-            
-            // Add loading answer
-            const answerElement = document.createElement('div');
-            answerElement.className = 'qa-item answer';
-            answerElement.innerHTML = `
-                <div class="qa-icon">
-                    <i class="fas fa-robot"></i>
-                </div>
-                <div class="qa-content">
-                    <div class="loading"><i class="fas fa-spinner fa-spin"></i> Thinking...</div>
-                </div>
-            `;
-            qaHistory.appendChild(answerElement);
-            
-            // Scroll to bottom
-            qaHistory.scrollTop = qaHistory.scrollHeight;
-            
-            // Clear input
-            questionInput.value = '';
-            
-            // Send question to API
-            fetch('/api/ask', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    question: question,
-                    transcript_id: currentVideoId
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                // Update answer
-                const answerContent = answerElement.querySelector('.qa-content');
-                if (data.error) {
-                    answerContent.innerHTML = `<p class="error">${data.error}</p>`;
-                } else {
-                    answerContent.innerHTML = `<p>${data.answer}</p>`;
-                    
-                    // Add sources if available
-                    if (data.sources && data.sources.length > 0) {
-                        const sourcesHtml = data.sources.map(source => 
-                            `<li>${source.title} (${Math.round(source.relevance * 100)}% relevant)</li>`
-                        ).join('');
-                        answerContent.innerHTML += `
-                            <div class="answer-sources">
-                                <h4>Sources:</h4>
-                                <ul>${sourcesHtml}</ul>
-                            </div>
-                        `;
-                    }
-                    
-                    // Update suggestions
-                    if (data.suggestions && data.suggestions.length > 0) {
-                        suggestionsList.innerHTML = data.suggestions.map(suggestion => 
-                            `<button class="suggestion-btn">${suggestion}</button>`
-                        ).join('');
-                        
-                        // Add event listeners to suggestion buttons
-                        document.querySelectorAll('.suggestion-btn').forEach(btn => {
-                            btn.addEventListener('click', function() {
-                                questionInput.value = this.textContent;
-                                questionInput.focus();
-                            });
-                        });
-                    }
-                }
-                
-                // Scroll to bottom
-                qaHistory.scrollTop = qaHistory.scrollHeight;
-            })
-            .catch(error => {
-                console.error('Error asking question:', error);
-                const answerContent = answerElement.querySelector('.qa-content');
-                answerContent.innerHTML = `
-                    <p class="error">Error processing your question. Please try again later.</p>
-                `;
-                
-                // Scroll to bottom
-                qaHistory.scrollTop = qaHistory.scrollHeight;
-            });
-        }
-        
-        function analyzeAllVideos() {
-            // Show loading state
-            analyzeAllBtn.disabled = true;
-            analyzeAllBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Analyzing...';
-            
-            // Send request to analyze all videos
-            fetch('/api/videos/analyze', {
-                method: 'POST'
-            })
-            .then(response => response.json())
-            .then(data => {
-                // Show success message
-                showToast(data.message, 'success');
-                
-                // Reset button
-                analyzeAllBtn.disabled = false;
-                analyzeAllBtn.innerHTML = '<i class="fas fa-brain"></i> Analyze All';
-                
-                // Reload videos
-                loadVideos();
-                
-                // If a video is currently open, reload its details
-                if (currentVideoId) {
-                    openVideoDetails(currentVideoId);
-                }
-            })
-            .catch(error => {
-                console.error('Error analyzing videos:', error);
-                showToast('Error analyzing videos. Please try again later.', 'error');
-                
-                // Reset button
-                analyzeAllBtn.disabled = false;
-                analyzeAllBtn.innerHTML = '<i class="fas fa-brain"></i> Analyze All';
-            });
-        }
-        
-        function closeModal() {
-            videoModal.setAttribute('aria-hidden', 'true');
-            videoModal.style.display = 'none';
-            currentVideoId = null;
-        }
-        
-        // Close modal when clicking outside
-        window.addEventListener('click', function(event) {
-            if (event.target === videoModal) {
-                closeModal();
-            }
-        });
-        
-        // Close modal with Escape key
-        document.addEventListener('keydown', function(event) {
-            if (event.key === 'Escape' && videoModal.style.display === 'flex') {
-                closeModal();
-            }
-        });
+    })
+    .catch(error => {
+        console.error('Error analyzing videos:', error);
+        showToast('Error analyzing videos. Please try again later.', 'error');
+
+        // Reset button
+        analyzeAllBtn.disabled = false;
+        analyzeAllBtn.innerHTML = '<i class="fas fa-brain"></i> Analyze All';
     });
+}
+
+function closeModal() {
+    videoModal.setAttribute('aria-hidden', 'true');
+    videoModal.style.display = 'none';
+    currentVideoId = null;
+}
+
+// Close modal when clicking outside
+window.addEventListener('click', function(event) {
+    if (event.target === videoModal) {
+        closeModal();
+    }
+});
 </script>
 
+{% endblock %}
+
+{% block styles %}
+{{ super() }}
 <style>
-    /* Video Library Styles */
-    .video-library-container {
-        max-width: 1200px;
-        margin: 0 auto;
-        padding: 20px;
-    }
-    
-    .library-title {
-        font-size: 2.5rem;
-        margin-bottom: 30px;
-        color: var(--primary-color);
-        text-align: center;
-    }
-    
     .library-controls {
         display: flex;
         justify-content: space-between;
@@ -1621,3 +1596,4 @@ function analyzeAllVideos() {
 </style>
 {% endblock %}
 
+-->

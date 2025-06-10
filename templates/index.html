@@ -23,6 +23,17 @@
             </div>
         </div>
         
+        <!-- YouTube Analysis Section -->
+        <div class="glass-card transcriber-form animate-slideInUp" style="margin-bottom: 32px;">
+            <form id="youtubeForm" onsubmit="return handleYouTubeSubmit(event)">
+                <div class="form-group">
+                    <label for="youtubeUrl" class="form-label"><i class="fab fa-youtube"></i> Analyze YouTube Video</label>
+                    <input type="text" id="youtubeUrl" name="youtubeUrl" class="form-control" placeholder="Enter YouTube URL (e.g., https://www.youtube.com/watch?v=...)" required style="margin-bottom: 12px;">
+                    <button type="submit" class="btn btn-primary" id="analyzeYoutubeBtn"><i class="fas fa-search"></i> Analyze Video</button>
+                </div>
+                <div id="youtubeResult" style="margin-top:12px;display:none;"></div>
+            </form>
+        </div>
         <!-- Upload Form -->
         <div class="glass-card transcriber-form animate-slideInUp">
             <form id="uploadForm" action="{{ url_for('transcribe') }}" method="post" enctype="multipart/form-data">
@@ -289,6 +300,66 @@
 {% endblock %}
 
 {% block scripts %}
+<script>
+// Creative onboarding tour for upload page
+window.startOnboardingTour = function() {
+  if (!window.OnboardingTour) {
+    showToast('Onboarding is not available.', 'error');
+    return;
+  }
+  const steps = [
+    {
+      element: '.transcriber-steps',
+      title: 'Step Indicator',
+      content: 'See your progress through the upload, transcribe, and analyze steps.',
+      position: 'top',
+      pulse: true
+    },
+    {
+      element: '.file-upload',
+      title: 'Upload Area',
+      content: 'Click here to choose your video or audio file for transcription.',
+      position: 'right',
+      pulse: true
+    },
+    {
+      element: '.progress',
+      title: 'Upload Progress',
+      content: 'Watch your upload progress here. This appears after you start uploading.',
+      position: 'top',
+      pulse: false
+    },
+    {
+      element: '.form-group',
+      title: 'Mode Selection',
+      content: 'Choose between full transcript or action points only.',
+      position: 'right',
+      pulse: true
+    },
+    {
+      element: '#submit-btn',
+      title: 'Transcribe Now',
+      content: 'Click here to start the AI transcription!',
+      position: 'top',
+      pulse: true
+    },
+    {
+      element: '.floating-help',
+      title: 'Need Help?',
+      content: 'Click this button anytime to revisit this tour or get support.',
+      position: 'left',
+      pulse: false
+    }
+  ];
+  const tour = new OnboardingTour({
+    steps: steps,
+    onComplete: function() { showToast('Tour complete! You’re ready to go.', 'success'); },
+    onSkip: function() { showToast('Tour skipped.', 'info'); }
+  });
+  tour.start();
+};
+</script>
+
     {{ super() }}
     <script>
         // Initialize steps and form interactions

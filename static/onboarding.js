@@ -5,32 +5,261 @@
  * to help users understand how to interact with the system.
  */
 
+// Global function to show onboarding overlay
+function showOnboardingOverlay() {
+    // Remove any existing overlays first
+    const existingOverlays = document.querySelectorAll('.onboarding-overlay');
+    existingOverlays.forEach(overlay => {
+        if (overlay && overlay.parentNode) {
+            overlay.parentNode.removeChild(overlay);
+        }
+    });
+    
+    // Create a new overlay
+    const overlay = document.createElement('div');
+    overlay.className = 'onboarding-overlay';
+    overlay.style.position = 'fixed';
+    overlay.style.top = '0';
+    overlay.style.left = '0';
+    overlay.style.width = '100%';
+    overlay.style.height = '100%';
+    overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
+    overlay.style.zIndex = '9998';
+    overlay.style.pointerEvents = 'auto';
+    
+    document.body.appendChild(overlay);
+    return overlay;
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  // Floating Help Button triggers onboarding or alert
+  const helpBtn = document.getElementById('floatingHelpBtn');
+  if (helpBtn) {
+    helpBtn.addEventListener('click', function() {
+      if (typeof window.startOnboardingTour === 'function') {
+        window.startOnboardingTour();
+      } else {
+        alert('Onboarding or help coming soon!');
+      }
+    });
+  }
+
+  // Toast notification global function
+  window.showToast = function(message, type = 'info', duration = 3000) {
+    const toast = document.getElementById('toast');
+    if (!toast) return;
+    toast.textContent = message;
+    toast.className = 'toast ' + type;
+    toast.style.display = 'block';
+    clearTimeout(toast._timeout);
+    toast._timeout = setTimeout(() => {
+      toast.style.display = 'none';
+    }, duration);
+  };
+});
+
 class OnboardingTour {
     constructor(options = {}) {
         // Default options
-        this.options = {
+        this.options = Object.assign({
             steps: [],
             onComplete: () => {},
             onSkip: () => {},
             showProgress: true,
             animationDuration: 500,
-            overlayOpacity: 0.7,
-            ...options
-        };
+            overlayOpacity: 0.7
+        }, options);
         
-        // State
-        this.currentStepIndex = 0;
+        // Initialize properties
+        this.currentStep = 0;
         this.isActive = false;
-        
-        // DOM elements
         this.overlay = null;
         this.tooltip = null;
-        this.progressBar = null;
+        this._escListener = null;
         
-        // Bind methods
+        // State
+        this.isActive = false;
+        this.currentStepIndex = 0;
+        this.overlay = null;
+        this.tooltip = null;
+        
+        // Define methods before binding
+        this.start = function() {
+            document.body.style.overflow = '';
+            if (this.options.steps.length === 0) {
+                console.warn('No steps provided for onboarding tour');
+                return;
+            }
+            if (localStorage.getItem('onboarding_seen')) {
+                return;
+            }
+            this.isActive = true;
+            this.currentStepIndex = 0;
+            this.createOverlay();
+            this.showStep(this.currentStepIndex);
+            document.dispatchEvent(new CustomEvent('onboarding:start'));
+            localStorage.setItem('onboarding_seen', 'true');
+        };
+
+        // Next, prev, and skip methods are defined as prototype methods outside the constructor
+        // to avoid duplication and ensure proper functionality
+
+        // Skip method is defined as a prototype method outside the constructor
+
+        this.complete = function() {
+            this.cleanup();
+            this.options.onComplete();
+            document.dispatchEvent(new CustomEvent('onboarding:complete'));
+            localStorage.setItem('onboardingComplete', 'true');
+            this.isActive = false;
+        };
+
+        this.cleanup = function() {
+            console.log('Onboarding cleanup() called');
+            document.body.style.overflow = '';
+            if (this.overlay) {
+                this.overlay.remove();
+                this.overlay = null;
+            }
+            if (this.tooltip) {
+                this.tooltip.remove();
+                this.tooltip = null;
+            }
+            const highlight = document.querySelector('.onboarding-highlight');
+            if (highlight) {
+                highlight.classList.remove('onboarding-highlight');
+                highlight.style.boxShadow = '';
+            }
+            if (this._escListener) {
+                document.removeEventListener('keydown', this._escListener);
+                this._escListener = null;
+            }
+        };
+
+        this.createOverlay = function() {
+            const overlay = document.createElement('div');
+            overlay.className = 'onboarding-overlay';
+            document.body.appendChild(overlay);
+            this.overlay = overlay;
+        };
+
+        this.createTooltip = function() {
+            const tooltip = document.createElement('div');
+            tooltip.className = 'onboarding-tooltip';
+            document.body.appendChild(tooltip);
+            this.tooltip = tooltip;
+            return tooltip;
+        };
+
+        this.positionTooltip = function(step) {
+            // Position logic will be implemented here
+        };
+
+        this.highlightElement = function(selector) {
+            // Highlight logic will be implemented here
+        };
+
+        this.showStep = function(step) {
+            console.log(`Showing onboarding step ${this.currentStepIndex + 1} of ${this.options.steps.length}`);
+            
+            // Clear any existing tooltips and highlights
+            if (this.tooltip) {
+                this.tooltip.remove();
+                this.tooltip = null;
+            }
+            
+            // Remove all highlights that might exist
+            const allHighlights = document.querySelectorAll('.onboarding-highlight');
+            allHighlights.forEach(highlight => {
+                highlight.classList.remove('onboarding-highlight');
+                highlight.style.boxShadow = '';
+            });
+            
+            // Get current step data
+            const currentStep = this.options.steps[this.currentStepIndex];
+            if (!currentStep) {
+                console.error('Invalid step data:', this.currentStepIndex);
+                this.complete();
+                return;
+            }
+            
+            // If step has a target element, highlight it
+            let targetElement = null;
+            if (currentStep.element) {
+                targetElement = document.querySelector(currentStep.element);
+                if (targetElement) {
+                    this.highlightElement(targetElement);
+                    console.log('Highlighted element:', currentStep.element);
+                } else {
+                    console.warn(`Target element ${currentStep.element} not found`);
+                }
+            }
+            
+            // Create tooltip
+            this.tooltip = this.createTooltip();
+            if (!this.tooltip) {
+                console.error('Failed to create tooltip');
+                return;
+            }
+            
+            // Append tooltip to body
+            document.body.appendChild(this.tooltip);
+            
+            // Position tooltip
+            if (targetElement) {
+                this.positionTooltip(this.tooltip, targetElement, currentStep.position || 'bottom');
+            } else {
+                // Center tooltip if no target element
+                this.tooltip.style.top = '50%';
+                this.tooltip.style.left = '50%';
+                this.tooltip.style.transform = 'translate(-50%, -50%)';
+            }
+            
+            // Ensure tooltip is visible
+            this.tooltip.style.display = 'block';
+            
+            // Ensure buttons work properly
+            this.setupTooltipButtons();
+        }
+        
+        this.setupTooltipButtons = function() {
+            // Find buttons in the current tooltip
+            const nextBtn = this.tooltip.querySelector('.onboarding-next-btn');
+            const backBtn = this.tooltip.querySelector('.onboarding-back-btn');
+            const skipBtn = this.tooltip.querySelector('.onboarding-skip-btn');
+            
+            // Clear any existing event listeners
+            if (nextBtn) {
+                const newNextBtn = nextBtn.cloneNode(true);
+                nextBtn.parentNode.replaceChild(newNextBtn, nextBtn);
+                newNextBtn.addEventListener('click', () => {
+                    console.log('Next button clicked');
+                    this.next();
+                });
+            }
+            
+            if (backBtn) {
+                const newBackBtn = backBtn.cloneNode(true);
+                backBtn.parentNode.replaceChild(newBackBtn, backBtn);
+                newBackBtn.addEventListener('click', () => {
+                    console.log('Back button clicked');
+                    this.prev();
+                });
+            }
+            
+            if (skipBtn) {
+                const newSkipBtn = skipBtn.cloneNode(true);
+                skipBtn.parentNode.replaceChild(newSkipBtn, skipBtn);
+                newSkipBtn.addEventListener('click', () => {
+                    console.log('Skip button clicked');
+                    this.skip();
+                });
+            }
+        }
+
+        // Now bind the methods to this
         this.start = this.start.bind(this);
         this.next = this.next.bind(this);
-        this.prev = this.prev.bind(this);
         this.skip = this.skip.bind(this);
         this.complete = this.complete.bind(this);
         this.createOverlay = this.createOverlay.bind(this);
@@ -38,6 +267,7 @@ class OnboardingTour {
         this.positionTooltip = this.positionTooltip.bind(this);
         this.highlightElement = this.highlightElement.bind(this);
         this.cleanup = this.cleanup.bind(this);
+        this.showStep = this.showStep.bind(this);
         
         // Initialize
         this.init();
@@ -277,6 +507,16 @@ class OnboardingTour {
     }
     
     next() {
+        console.log('Next button clicked, moving to next step');
+        
+        // Remove any existing overlays first to prevent stacking
+        const existingOverlays = document.querySelectorAll('.onboarding-overlay:not(:first-child)');
+        existingOverlays.forEach(overlay => {
+            if (overlay && overlay.parentNode) {
+                overlay.parentNode.removeChild(overlay);
+            }
+        });
+        
         if (this.currentStepIndex < this.options.steps.length - 1) {
             this.currentStepIndex++;
             this.showStep(this.currentStepIndex);
@@ -301,8 +541,9 @@ class OnboardingTour {
             }));
         }
     }
-    
+
     skip() {
+        console.log('Skip button clicked, ending tour');
         this.cleanup();
         this.isActive = false;
         
@@ -311,49 +552,65 @@ class OnboardingTour {
             this.options.onSkip();
         }
         
-}
-
-complete() {
-    console.log('Onboarding complete() called');
-    this.cleanup();
-    this.isActive = false;
-    // Call onComplete callback
-    if (typeof this.options.onComplete === 'function') {
-        this.options.onComplete();
+        // Dispatch event
+        document.dispatchEvent(new CustomEvent('onboarding:skip'));
     }
-    // Dispatch event
-    document.dispatchEvent(new CustomEvent('onboarding:complete'));
-}
 
-cleanup() {
-    console.log('Onboarding cleanup() called');
-    // Always re-enable body scroll after onboarding ends
-    document.body.style.overflow = '';
-    // Remove overlay
-    if (this.overlay) {
-        this.overlay.remove();
+
+    complete() {
+        console.log('Onboarding complete() called');
+        this.cleanup();
+        this.isActive = false;
+        // Call onComplete callback
+        if (typeof this.options.onComplete === 'function') {
+            this.options.onComplete();
+        }
+        // Dispatch event
+        document.dispatchEvent(new CustomEvent('onboarding:complete'));
+    }
+
+    cleanup() {
+        console.log('Onboarding cleanup() called - removing all overlays');
+        document.body.style.overflow = '';
+        
+        // Remove all onboarding overlays (including any that might have been orphaned)
+        const allOverlays = document.querySelectorAll('.onboarding-overlay');
+        allOverlays.forEach(overlay => {
+            overlay.remove();
+        });
         this.overlay = null;
-    }
-    // Remove tooltip
-    if (this.tooltip) {
-        this.tooltip.remove();
+        
+        // Remove all tooltips (including any that might have been orphaned)
+        const allTooltips = document.querySelectorAll('.onboarding-tooltip');
+        allTooltips.forEach(tooltip => {
+            tooltip.remove();
+        });
         this.tooltip = null;
+        
+        // Remove all highlights
+        const allHighlights = document.querySelectorAll('.onboarding-highlight');
+        allHighlights.forEach(highlight => {
+            highlight.classList.remove('onboarding-highlight');
+            highlight.style.boxShadow = '';
+        });
+        
+        // Remove Escape key listener if present
+        if (this._escListener) {
+            document.removeEventListener('keydown', this._escListener);
+            this._escListener = null;
+        }
+        
+        // Also remove any guaranteed welcome modals that might be showing
+        const welcomeModal = document.getElementById('guaranteed-welcome-modal');
+        if (welcomeModal) {
+            welcomeModal.style.display = 'none';
+        }
     }
-    // Remove highlight
-    const highlight = document.querySelector('.onboarding-highlight');
-    if (highlight) {
-        highlight.remove();
-    }
-    // Remove Escape key listener if present
-    if (this._escListener) {
-        document.removeEventListener('keydown', this._escListener);
-        this._escListener = null;
-    }
-}
 
 } // END OF OnboardingTour CLASS
 
 // -- Onboarding Step Definitions --
+// Ensure no illegal return statements exist in this file
 const onboardingTours = {
     home: [
         {
@@ -446,8 +703,7 @@ const onboardingTours = {
             element: ".suggestions-container",
             title: "Smart Suggestions",
             content: "We provide context-aware suggestions to help you ask relevant questions about your content.",
-            position: "bottom",
-            pulse: true
+            position: "bottom"
         }
     ]
 };
@@ -455,6 +711,7 @@ const onboardingTours = {
 // Add Escape key handler to onboarding
 const origStart = OnboardingTour.prototype.start;
 OnboardingTour.prototype.start = function() {
+    // Add escape key listener if not already added
     if (!this._escListener) {
         this._escListener = (e) => {
             if (e.key === 'Escape') {
@@ -463,6 +720,13 @@ OnboardingTour.prototype.start = function() {
         };
         document.addEventListener('keydown', this._escListener);
     }
+    
+    // Only call showOnboardingOverlay if it exists as a function
+    if (typeof showOnboardingOverlay === 'function') {
+        showOnboardingOverlay();
+    }
+    
+    // Call original start method
     origStart.apply(this, arguments);
 };
 
@@ -485,18 +749,42 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
     
-    // Start appropriate tour based on current page
-    if (isFirstVisit) {
+        // Debug log - onboarding system initialization
+    console.log('Onboarding tours initialized, ready to be triggered');
+    
+    // Add global function to start appropriate onboarding tour
+    window.startAppropriateOnboardingTour = function() {
+        console.log('Attempting to start appropriate onboarding tour');
         // Determine current page
         const path = window.location.pathname;
         
-        if (path.includes('/videos')) {
+        if (path.includes('/videos') && window.onboarding.videoLibrary) {
+            console.log('Starting video library onboarding');
             window.onboarding.videoLibrary.start();
-        } else if (path.includes('/chat')) {
+            return true;
+        } else if ((path.includes('/chat') || path.includes('/chat_new')) && window.onboarding.chat) {
+            console.log('Starting chat onboarding');
             window.onboarding.chat.start();
-        } else {
-            // Default to home tour
+            return true;
+        } else if (window.onboarding.home) {
+            console.log('Starting home onboarding');
             window.onboarding.home.start();
+            return true;
+        }
+        return false;
+    };
+    
+    // Check if we should start tours directly (for testing or when welcome modal is disabled)
+    if (isFirstVisit) {
+        // If we're bypassing welcome modal OR we've already seen it this session
+        if (window.location.search.includes('skip_welcome=true') || sessionStorage.getItem('welcomeModalSeen')) {
+            console.log('Auto-starting onboarding tour (welcome modal bypassed)');
+            // Small delay to ensure DOM is fully ready
+            setTimeout(() => {
+                window.startAppropriateOnboardingTour();
+            }, 1000);
+        } else {
+            console.log('Deferring onboarding to welcome modal');
         }
     }
     

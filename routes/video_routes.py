@@ -6,6 +6,25 @@ from werkzeug.utils import secure_filename
 
 video_bp = Blueprint('video', __name__)
 
+from pytube import YouTube
+
+@video_bp.route('/api/analyze_youtube', methods=['POST'])
+def analyze_youtube():
+    data = request.get_json()
+    youtube_url = data.get('url')
+    if not youtube_url:
+        return jsonify({'error': 'No URL provided'}), 400
+    try:
+        yt = YouTube(youtube_url)
+        return jsonify({
+            'title': yt.title,
+            'author': yt.author,
+            'length': yt.length,
+            'description': yt.description[:200] if yt.description else ''
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 def get_video_metadata():
     """Helper function to get video metadata from storage."""
     try:

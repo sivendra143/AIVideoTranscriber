@@ -10,6 +10,42 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <!-- Font Awesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <noscript><div style="background:#ffdddd;color:#900;padding:10px;text-align:center;">This site requires JavaScript for full functionality. Please enable JavaScript in your browser.</div></noscript>
+    <!-- Removed permanent CSS warning - use toast notifications instead for transient issues -->
+    <script>
+      // More reliable CSS loading detection with automatic dismissal
+      window.addEventListener('DOMContentLoaded', function() {
+        // Give stylesheets time to load before checking
+        setTimeout(function() {
+          // Check multiple CSS properties that should be defined in our stylesheets
+          var primaryColor = getComputedStyle(document.documentElement).getPropertyValue('--primary-color').trim();
+          var hasModernCSS = primaryColor && primaryColor !== '';
+          
+          // Only if CSS is truly missing, show a temporary toast notification
+          if (!hasModernCSS) {
+            // Create and show a toast instead of a blocking banner
+            var toast = document.createElement('div');
+            toast.className = 'toast toast-warning';
+            toast.innerHTML = 'Some styles failed to load. <button onclick="this.parentNode.style.display=\'none\'">Dismiss</button>';
+            toast.style.position = 'fixed';
+            toast.style.bottom = '20px';
+            toast.style.right = '20px';
+            toast.style.background = '#ffdddd';
+            toast.style.color = '#900';
+            toast.style.padding = '10px 15px';
+            toast.style.borderRadius = '4px';
+            toast.style.boxShadow = '0 2px 5px rgba(0,0,0,0.2)';
+            toast.style.zIndex = '5000';
+            document.body.appendChild(toast);
+            
+            // Auto-dismiss after 8 seconds
+            setTimeout(function() { 
+              if (toast.parentNode) toast.parentNode.removeChild(toast);
+            }, 8000);
+          }
+        }, 2000); // Wait 2 seconds before checking
+      });
+    </script>
     <!-- Modern CSS Framework -->
     <link rel="stylesheet" href="{{ url_for('static', filename='modern.css') }}">
     <!-- Legacy CSS for compatibility -->
@@ -179,6 +215,162 @@
         });
     </script>
     {% endblock %}
+    <!-- GUARANTEED WELCOME MODAL AND TOUR SYSTEM - CANNOT FAIL -->
+    <div id="guaranteed-welcome-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.8); z-index: 99999; align-items: center; justify-content: center;">
+        <div style="background-color: white; max-width: 600px; border-radius: 10px; padding: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); animation: fadeIn 0.5s;">
+            <h2 style="color: #2c3e50; font-size: 24px; margin-top: 0;">Welcome to VideoTranscriber</h2>
+            <p style="color: #555; font-size: 16px;">Upload your videos and let AI extract transcripts and insights automatically.</p>
+            <div style="display: flex; justify-content: center; margin-top: 20px;">
+                <button id="start-tour-btn" style="background-color: #3498db; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-size: 16px; margin-right: 10px;">Start Tour</button>
+                <button id="skip-tour-btn" style="background-color: #95a5a6; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-size: 16px;">Skip Tour</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- EMERGENCY OVERLAY REMOVAL BUTTON -->
+    <div id="emergency-overlay-fix" style="position: fixed; bottom: 10px; right: 10px; z-index: 100000; display: none;">
+        <button onclick="removeAllOverlays()" style="background-color: #e74c3c; color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer; font-size: 12px;">Clear All Overlays</button>
+    </div>
+
+    <script>
+    // Function to remove all overlays
+    function removeAllOverlays() {
+        console.log('Emergency overlay removal activated');
+        
+        // Remove all onboarding overlays
+        var overlays = document.querySelectorAll('.onboarding-overlay');
+        overlays.forEach(function(overlay) {
+            if (overlay && overlay.parentNode) {
+                overlay.parentNode.removeChild(overlay);
+            }
+        });
+        
+        // Remove all tooltips
+        var tooltips = document.querySelectorAll('.onboarding-tooltip');
+        tooltips.forEach(function(tooltip) {
+            if (tooltip && tooltip.parentNode) {
+                tooltip.parentNode.removeChild(tooltip);
+            }
+        });
+        
+        // Remove all highlights
+        var highlights = document.querySelectorAll('.onboarding-highlight');
+        highlights.forEach(function(highlight) {
+            if (highlight) {
+                highlight.classList.remove('onboarding-highlight');
+                highlight.style.boxShadow = '';
+            }
+        });
+        
+        // Hide welcome modal
+        var modal = document.getElementById('guaranteed-welcome-modal');
+        if (modal) {
+            modal.style.display = 'none';
+        }
+        
+        // Reset body overflow
+        document.body.style.overflow = 'auto';
+        
+        // Show success message
+        alert('All overlays removed successfully!');
+    }
+    
+    // Show emergency button after 5 seconds if any overlay is visible
+    setTimeout(function() {
+        var anyOverlayVisible = document.querySelector('.onboarding-overlay') || 
+                             (document.getElementById('guaranteed-welcome-modal') && 
+                              document.getElementById('guaranteed-welcome-modal').style.display !== 'none');
+        
+        if (anyOverlayVisible) {
+            document.getElementById('emergency-overlay-fix').style.display = 'block';
+        }
+    }, 5000);
+    
+    // GUARANTEED WELCOME MODAL CONTROLLER - CANNOT FAIL
+    (function() {
+        function forceShowWelcomeModal() {
+            var modal = document.getElementById('guaranteed-welcome-modal');
+            if (!modal) return;
+            
+            // Always force show modal on first visit
+            if (!localStorage.getItem('welcome_seen')) {
+                console.log('FORCING WELCOME MODAL DISPLAY');
+                modal.style.display = 'flex';
+            }
+            
+            // Start onboarding when tour button clicked
+            document.getElementById('start-tour-btn').addEventListener('click', function() {
+                // Mark as seen in both localStorage and sessionStorage
+                localStorage.setItem('welcome_seen', 'true');
+                sessionStorage.setItem('welcomeModalSeen', 'true');
+                
+                // Properly hide modal and remove any existing overlays
+                modal.style.display = 'none';
+                document.body.style.overflow = 'auto';
+                
+                // Remove any existing overlays that might be orphaned
+                var existingOverlays = document.querySelectorAll('.onboarding-overlay');
+                existingOverlays.forEach(function(overlay) {
+                    if (overlay && overlay.parentNode) {
+                        overlay.parentNode.removeChild(overlay);
+                    }
+                });
+                
+                console.log('Starting tour after welcome modal close');
+                
+                // Start appropriate onboarding tour with a delay to ensure modal is gone
+                setTimeout(function() {
+                    // Try different methods to start tour
+                    if (window.startAppropriateOnboardingTour) {
+                        window.startAppropriateOnboardingTour();
+                    } else if (window.onboarding) {
+                        var path = window.location.pathname;
+                        if (path.includes('/videos') && window.onboarding.videoLibrary) {
+                            window.onboarding.videoLibrary.start();
+                        } else if (path.includes('/chat') && window.onboarding.chat) {
+                            window.onboarding.chat.start();
+                        } else if (window.onboarding.home) {
+                            window.onboarding.home.start();
+                        }
+                    } else if (window.startOnboardingTour) {
+                        window.startOnboardingTour();
+                    }
+                }, 800); // Increased delay to ensure modal is fully gone
+            });
+            
+            // Skip tour
+            document.getElementById('skip-tour-btn').addEventListener('click', function() {
+                // Mark as seen in both localStorage and sessionStorage
+                localStorage.setItem('welcome_seen', 'true');
+                sessionStorage.setItem('welcomeModalSeen', 'true');
+                
+                // Properly hide modal and clean up
+                modal.style.display = 'none';
+                document.body.style.overflow = 'auto';
+                
+                // Remove any existing overlays that might be orphaned
+                var existingOverlays = document.querySelectorAll('.onboarding-overlay');
+                existingOverlays.forEach(function(overlay) {
+                    if (overlay && overlay.parentNode) {
+                        overlay.parentNode.removeChild(overlay);
+                    }
+                });
+                
+                console.log('Tour skipped, welcome modal closed');
+            });
+        }
+        
+        // Ensure modal shows as soon as possible
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', forceShowWelcomeModal);
+        } else {
+            forceShowWelcomeModal();
+        }
+        
+        // As a backup, also try after window load
+        window.addEventListener('load', forceShowWelcomeModal);
+    })();
+    </script>
 </body>
 </html>
 

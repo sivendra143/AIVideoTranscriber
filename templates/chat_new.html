@@ -1,3 +1,4 @@
+
 {% extends "base.html" %}
 
 {% block content %}
@@ -101,6 +102,9 @@
         
         <!-- Loading State -->
         <div id="loading" class="loading-state" style="display:none;">
+            <div class="onboarding-overlay" style="display:none;">
+                <button onclick="finishOnboarding()" style="position:absolute;top:20px;right:20px;z-index:10000;">Close Overlay</button>
+            </div>
             <div class="loading-spinner"></div>
             <p class="loading-text">Analyzing your question...</p>
         </div>
@@ -136,9 +140,67 @@
             <p>Try asking about the content, participants, or key points from the video.</p>
         </div>
     </div>
+    <div class="floating-help" id="floatingHelpBtn" title="Need help?">?</div>
+    <div id="toast" class="toast" style="display:none;"></div>
 {% endblock %}
 
 {% block scripts %}
+<script>
+// Creative onboarding tour for chat page
+window.startOnboardingTour = function() {
+  if (!window.OnboardingTour) {
+    showToast('Onboarding is not available.', 'error');
+    return;
+  }
+  // Mark welcome as seen to prevent it from showing after manual onboarding start
+  sessionStorage.setItem('welcomeModalSeen', 'true');
+  localStorage.setItem('welcome_seen', 'true');
+  const steps = [
+    {
+      element: '.transcript-container',
+      title: 'Transcript',
+      content: 'This is your video transcript. You can scroll and review the entire content here.',
+      position: 'right',
+      pulse: true
+    },
+    {
+      element: '.suggestion-bar',
+      title: 'Quick Questions',
+      content: 'Use these smart suggestions to quickly ask about key points in your video.',
+      position: 'bottom',
+      pulse: true
+    },
+    {
+      element: '.input-row',
+      title: 'Ask Anything',
+      content: 'Type your question about the video here and press Send.',
+      position: 'top',
+      pulse: true
+    },
+    {
+      element: '.response-card',
+      title: 'AI Response',
+      content: 'See the AI’s answer here. You can copy, analyze, or download responses.',
+      position: 'left',
+      pulse: true
+    },
+    {
+      element: '.floating-help',
+      title: 'Need Help?',
+      content: 'Click this button anytime to revisit this tour or get support.',
+      position: 'left',
+      pulse: false
+    }
+  ];
+  const tour = new OnboardingTour({
+    steps: steps,
+    onComplete: function() { showToast('Tour complete! You’re ready to go.', 'success'); },
+    onSkip: function() { showToast('Tour skipped.', 'info'); }
+  });
+  tour.start();
+};
+</script>
+
     <script>
         // Initialize on page load
         document.addEventListener('DOMContentLoaded', function() {

@@ -1,5 +1,5 @@
 <!-- Modern Welcome Modal Component -->
-<div id="welcome-modal" class="modal-backdrop" aria-hidden="true" style="display: none;">
+<div id="welcome-modal" class="modal-backdrop" aria-hidden="true" style="display: none; z-index: 9999; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.7);">
     <div class="modal-content glass-card animate-fadeIn">
         <div class="modal-header">
             <h2><i class="fas fa-video"></i> Welcome to VideoTranscriber</h2>
@@ -576,12 +576,50 @@
 <script>
     // Make functions globally available
     window.hideModal = function() {
+        console.log('Hiding welcome modal and triggering onboarding');
         const modal = document.getElementById('welcome-modal');
         if (modal) {
             modal.style.display = 'none';
             document.body.style.overflow = 'auto';
-            // Store in session storage that the modal has been seen
+            // Store that the modal has been seen (in both session and local storage for consistency)
             sessionStorage.setItem('welcomeModalSeen', 'true');
+            localStorage.setItem('welcome_seen', 'true');
+            
+            // Explicitly start onboarding tour based on current page
+            setTimeout(function() {
+                // Start appropriate onboarding based on URL path
+                const path = window.location.pathname;
+                
+                // For home page
+                if (!path.includes('/videos') && !path.includes('/chat')) {
+                    if (typeof window.startOnboardingTour === 'function') {
+                        console.log('Starting home onboarding tour');
+                        window.startOnboardingTour();
+                    } else if (window.onboarding && window.onboarding.home) {
+                        console.log('Starting home onboarding from object');
+                        window.onboarding.home.start();
+                    }
+                }
+                
+                // For video library page
+                else if (path.includes('/videos')) {
+                    if (window.onboarding && window.onboarding.videoLibrary) {
+                        console.log('Starting video library onboarding');
+                        window.onboarding.videoLibrary.start();
+                    }
+                }
+                
+                // For chat pages
+                else if (path.includes('/chat')) {
+                    if (typeof window.startOnboardingTour === 'function') {
+                        console.log('Starting chat onboarding tour via function');
+                        window.startOnboardingTour();
+                    } else if (window.onboarding && window.onboarding.chat) {
+                        console.log('Starting chat onboarding from object');
+                        window.onboarding.chat.start();
+                    }
+                }
+            }, 500);
         }
     };
 
@@ -593,26 +631,38 @@
         }
     };
 
+    // Initialize welcome modal and controls
     document.addEventListener('DOMContentLoaded', function() {
+        // Get modal and controls
         const modal = document.getElementById('welcome-modal');
-        
-        // Only show modal if it hasn't been shown in this session
-        if (!sessionStorage.getItem('welcomeModalSeen')) {
-            window.showModal();
-        }
         const closeBtn = modal.querySelector('.modal-close');
         const nextBtn = modal.querySelector('.next-button');
         const prevBtn = modal.querySelector('.prev-button');
         const dots = modal.querySelectorAll('.dot');
         const steps = modal.querySelectorAll('.welcome-step');
         
+        // Force show the modal on page load if it's first visit
+        if (!sessionStorage.getItem('welcomeModalSeen') && !localStorage.getItem('welcome_seen')) {
+            console.log('Welcome modal should show - first visit detected');
+            // Show welcome modal after short delay
+            setTimeout(function() {
+                console.log('Showing welcome modal');
+                if (modal) {
+                    modal.style.display = 'flex';
+                    document.body.style.overflow = 'hidden';
+                } else {
+                    console.error('Welcome modal element not found');
+                }
+            }, 800);
+        } else {
+            console.log('Welcome modal skipped - already seen');
+        }
+        
         let currentStep = 1;
         const totalSteps = steps.length;
         
-        // Show modal if it's the first visit
-        if (!localStorage.getItem('welcome_seen')) {
-            showModal();
-        }
+        // This section removed to avoid duplicate modal showing
+        // Modal showing is already handled by the sessionStorage check above
         
         // Close modal
         closeBtn.addEventListener('click', hideModal);

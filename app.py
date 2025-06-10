@@ -5,6 +5,19 @@ import json
 import threading
 import requests
 from typing import Dict, Any, Optional
+from pytube import YouTube
+import tempfile
+import sys
+
+# Add current directory to Python path
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+# Direct import implementation
+import importlib.util
+
+# Direct SQLAlchemy import
+from flask_sqlalchemy import SQLAlchemy
+db = SQLAlchemy()
 
 # LM Studio Configuration
 LM_STUDIO_API_URL = "http://localhost:1234/v1/chat/completions"  # Default LM Studio API URL
@@ -38,6 +51,7 @@ def query_lm_studio(messages: list, model: str = None, temperature: float = 0.7,
     except requests.exceptions.RequestException as e:
         print(f"Error querying LM Studio: {e}")
         return None
+
 from datetime import datetime
 from routes.language_routes import language_bp
 from routes.video_routes import video_bp
@@ -108,6 +122,19 @@ app.register_blueprint(video_bp)
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 os.makedirs(app.config['VIDEO_FOLDER'], exist_ok=True)
 os.makedirs(app.config['OUTPUT_FOLDER'], exist_ok=True)
+
+# Define Video model directly in app.py
+class Video(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text)
+    duration = db.Column(db.Integer)
+    source = db.Column(db.String(50))  # 'upload', 'youtube', 'drive'
+    source_url = db.Column(db.String(500))
+    file_path = db.Column(db.String(500))
+    transcript = db.Column(db.Text)
+    analysis = db.Column(db.JSON)
+    created_at = db.Column(db.DateTime, default=db.func.current_timestamp())
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in app.config['ALLOWED_EXTENSIONS']
@@ -391,6 +418,88 @@ def detect_content():
             'message': f'Error analyzing video: {str(e)}'
         })
 
+@app.route('/api/videos/youtube', methods=['POST'])
+def analyze_youtube_video():
+    data = request.json
+    youtube_url = data.get('url')
+    
+    if not youtube_url:
+        return jsonify({'error': 'Missing YouTube URL'}), 400
+    
+    try:
+        # Download YouTube video
+        yt = YouTube(youtube_url)
+        stream = yt.streams.filter(progressive=True, file_extension='mp4').order_by('resolution').desc().first()
+        temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.mp4')
+        stream.download(output_path=tempfile.gettempdir(), filename=temp_file.name)
+        
+        # Process video using existing pipeline
+        result = process_video(temp_file.name)
+        
+        # Save to database
+        video = Video(
+            title=yt.title,
+            description=yt.description,
+            duration=yt.length,
+            source='youtube',
+            source_url=youtube_url,
+            file_path=temp_file.name,
+            analysis=result
+        )
+        db.session.add(video)
+        db.session.commit()
+        
+        return jsonify({
+            'message': 'YouTube video processed successfully',
+            'video_id': video.id
+        })
+    
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/videos/drive', methods=['POST'])
+def analyze_drive_video():
+    data = request.json
+    drive_url = data.get('url')
+    
+    if not drive_url:
+        return jsonify({'error': 'Missing Google Drive URL'}), 400
+    
+    try:
+        # Extract file ID from URL
+        file_id = drive_url.split('/d/')[1].split('/')[0]
+        direct_download_url = f"https://drive.google.com/uc?export=download&id={file_id}"
+        
+        # Download file
+        temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.mp4')
+        response = requests.get(direct_download_url, stream=True)
+        
+        with open(temp_file.name, 'wb') as f:
+            for chunk in response.iter_content(chunk_size=8192):
+                f.write(chunk)
+        
+        # Process video
+        result = process_video(temp_file.name)
+        
+        # Save to database
+        video = Video(
+            title=f"Google Drive Video {file_id[:8]}",
+            source='google_drive',
+            source_url=drive_url,
+            file_path=temp_file.name,
+            analysis=result
+        )
+        db.session.add(video)
+        db.session.commit()
+        
+        return jsonify({
+            'message': 'Google Drive video processed successfully',
+            'video_id': video.id
+        })
+    
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/chat')
 def chat():
     transcript = session.get('transcript', '')
@@ -554,4 +663,3 @@ def set_language():
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5001, debug=True)
-
